@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="index.css">
+    <title>chip8 emulator</title>
+</head>
+
+<body>
+
+    <body>
+        <canvas id="canvas" height="32" width="64"></canvas>
+    </body>
+
+    <div class="play">
+        <button id="play" class="button" onclick="run()"><span>Play</span></button>
+    </div>
+
+    <noscript>This page contains webassembly and javascript content, please enable javascript in your
+        browser.</noscript>
+    <script src='./chiphuit.js'></script>
+    <script>
+        const { refresh } = wasm_bindgen;
+        wasm_bindgen('./chiphuit_bg.wasm');
+
+        document.getElementById("play").addEventListener('keypress', function (event) {
+            if (event.keyCode == 13) {
+                run();
+            }
+        });
+
+        async function run() {
+            refresh();
+        }
+    </script>
+</body>
+
+</html>
