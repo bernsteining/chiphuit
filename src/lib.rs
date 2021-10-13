@@ -2,6 +2,9 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{WebGl2RenderingContext, WebGlProgram, WebGlShader};
 
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use js_sys::Math::random;
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
@@ -79,6 +82,9 @@ impl Emulator {
 }
 
 //write opcodes pattern matching logic
+
+// check this for the loop
+// https://rustwasm.github.io/docs/wasm-bindgen/examples/request-animation-frame.html
 
 #[wasm_bindgen(start)]
 pub fn main() -> Result<(), JsValue> {
@@ -166,16 +172,44 @@ pub fn main() -> Result<(), JsValue> {
 
     context.bind_vertex_array(Some(&vao));
 
-    let vert_count = (verticesd.len() / 3) as i32;
-    draw(&context, vert_count);
+    let f = Rc::new(RefCell::new(None));
+    let g = f.clone();
+    *g.borrow_mut() = Some(Closure::wrap(Box::new(move || {
+        // Set the body's text content to how many times this
+        // requestAnimationFrame callback has fired.
+
+        let mut screen_array = [1.0; 64 * 32 * 2];
+        for x in &mut screen_array {
+            *x = ((random() * 32.0).floor() / 32.0) as f32;
+        }
+        draw_screen(&context, screen_array, position_attribute_location as u32);
+
+        // Schedule ourself for another requestAnimationFrame callback.
+        request_animation_frame(f.borrow().as_ref().unwrap());
+    }) as Box<dyn FnMut()>));
+
+    request_animation_frame(g.borrow().as_ref().unwrap());
+
     Ok(())
 }
 
-fn draw(context: &WebGl2RenderingContext, vert_count: i32) {
-    context.clear_color(0.0, 0.0, 0.0, 0.0);
-    context.clear(WebGl2RenderingContext::COLOR_BUFFER_BIT);
+fn draw_screen(
+    context: &WebGl2RenderingContext,
+    screen_array: [f32; 64 * 32 * 2],
+    position_attribute_location: u32,
+) {
+    unsafe {
+        let positions_array_buf_view = js_sys::Float32Array::view(&screen_array);
 
-    context.draw_arrays(WebGl2RenderingContext::POINTS, 0, vert_count);
+        context.buffer_data_with_array_buffer_view(
+            WebGl2RenderingContext::ARRAY_BUFFER,
+            &positions_array_buf_view,
+            WebGl2RenderingContext::STATIC_DRAW,
+        );
+    }
+
+    context.enable_vertex_attrib_array(position_attribute_location as u32);
+    context.draw_arrays(WebGl2RenderingContext::POINTS, 0, 64 * 32 * 2 / 3);
 }
 
 pub fn compile_shader(
@@ -200,6 +234,26 @@ pub fn compile_shader(
             .get_shader_info_log(&shader)
             .unwrap_or_else(|| String::from("Unknown error creating shader")))
     }
+}
+
+fn window() -> web_sys::Window {
+    web_sys::window().expect("no global `window` exists")
+}
+
+fn document() -> web_sys::Document {
+    window()
+        .document()
+        .expect("should have a document on window")
+}
+
+fn body() -> web_sys::HtmlElement {
+    document().body().expect("document should have a body")
+}
+
+fn request_animation_frame(f: &Closure<dyn FnMut()>) {
+    window()
+        .request_animation_frame(f.as_ref().unchecked_ref())
+        .expect("should register `requestAnimationFrame` OK");
 }
 
 pub fn link_program(
