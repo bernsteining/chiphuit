@@ -100,7 +100,9 @@ pub fn main() -> Result<(), JsValue> {
 
         void main() {
 
+
             gl_Position = position;
+            gl_PointSize = 9.99;
         }
         "##,
     )?;
@@ -141,7 +143,7 @@ pub fn main() -> Result<(), JsValue> {
     //let mut rng = rand::thread_rng();
     let mut verticesd = [1.0; 64 * 32 * 2];
     for x in &mut verticesd {
-        *x = random() as f32;
+        *x = ((random() * 32.0).floor() / 32.0) as f32;
     }
 
     unsafe {
