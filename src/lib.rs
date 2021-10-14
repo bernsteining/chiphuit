@@ -174,9 +174,19 @@ pub fn main() -> Result<(), JsValue> {
 
     let f = Rc::new(RefCell::new(None));
     let g = f.clone();
+
+    let t1 = Rc::new(RefCell::new(None));
+    let t2 = t1.clone();
+
+    let w = window();
+    *t2.borrow_mut() = Some(Closure::wrap(Box::new(move || {
+        request_animation_frame(&w, f.borrow().as_ref().unwrap());
+    }) as Box<dyn FnMut()>));
+
+    let w2 = window();
+
     *g.borrow_mut() = Some(Closure::wrap(Box::new(move || {
-        // Set the body's text content to how many times this
-        // requestAnimationFrame callback has fired.
+        set_timeout(&w2, t1.borrow().as_ref().unwrap(), 167);
 
         let mut screen_array = [1.0; 64 * 32 * 2];
         for x in &mut screen_array {
@@ -185,12 +195,31 @@ pub fn main() -> Result<(), JsValue> {
         draw_screen(&context, screen_array, position_attribute_location as u32);
 
         // Schedule ourself for another requestAnimationFrame callback.
-        request_animation_frame(f.borrow().as_ref().unwrap());
+        //request_animation_frame(f.borrow().as_ref().unwrap());
     }) as Box<dyn FnMut()>));
 
-    request_animation_frame(g.borrow().as_ref().unwrap());
+    request_animation_frame(&window(), g.borrow().as_ref().unwrap());
 
     Ok(())
+}
+
+fn request_animation_frame(window: &web_sys::Window, f: &Closure<dyn FnMut()>) -> i32 {
+    window
+        .request_animation_frame(f.as_ref().unchecked_ref())
+        .expect("should register `requestAnimationFrame` OK")
+}
+
+fn window() -> web_sys::Window {
+    web_sys::window().expect("no global `window` exists")
+}
+
+fn set_timeout(window: &web_sys::Window, f: &Closure<dyn FnMut()>, timeout_ms: i32) -> i32 {
+    window
+        .set_timeout_with_callback_and_timeout_and_arguments_0(
+            f.as_ref().unchecked_ref(),
+            timeout_ms,
+        )
+        .expect("should register `setTimeout` OK")
 }
 
 fn draw_screen(
@@ -236,10 +265,6 @@ pub fn compile_shader(
     }
 }
 
-fn window() -> web_sys::Window {
-    web_sys::window().expect("no global `window` exists")
-}
-
 fn document() -> web_sys::Document {
     window()
         .document()
@@ -248,12 +273,6 @@ fn document() -> web_sys::Document {
 
 fn body() -> web_sys::HtmlElement {
     document().body().expect("document should have a body")
-}
-
-fn request_animation_frame(f: &Closure<dyn FnMut()>) {
-    window()
-        .request_animation_frame(f.as_ref().unchecked_ref())
-        .expect("should register `requestAnimationFrame` OK");
 }
 
 pub fn link_program(
