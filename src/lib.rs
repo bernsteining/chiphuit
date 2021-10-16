@@ -1,9 +1,8 @@
+use std::cell::RefCell;
+use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{WebGl2RenderingContext, WebGlProgram, WebGlShader};
-
-use std::cell::RefCell;
-use std::rc::Rc;
 
 use js_sys::Math::random;
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
