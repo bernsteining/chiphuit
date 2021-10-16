@@ -7,32 +7,37 @@
     <title>chip8 emulator</title>
 </head>
 
+<canvas id="canvas" height="720" width="1280"></canvas>
+
+
 <body>
 
-    <body>
-        <canvas id="canvas" height="32" width="64"></canvas>
-    </body>
-
     <div class="play">
-        <button id="play" class="button" onclick="run()"><span>Play</span></button>
+        <button id="play" class="button" onclick="handle_keyboard('1')"><span>Play</span></button>
+    </div>
+
+    <div class="KEYPAD INPUT">
+        KEYS: 0-9A-F
     </div>
 
     <noscript>This page contains webassembly and javascript content, please enable javascript in your
         browser.</noscript>
     <script src='./chiphuit.js'></script>
     <script>
-        const { refresh } = wasm_bindgen;
+        const { handle_input } = wasm_bindgen;
         wasm_bindgen('./chiphuit_bg.wasm');
 
-        document.getElementById("play").addEventListener('keypress', function (event) {
-            if (event.keyCode == 13) {
-                run();
-            }
-        });
+        document.onkeypress = keyboard_game;
 
-        async function run() {
-            refresh();
+
+        function keyboard_game(event) {
+            handled_keycodes = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"];
+            console.log(event.key)
+            if (handled_keycodes.includes(event.key)) {
+                handle_input(event.key);
+            }
         }
+
     </script>
 </body>
 

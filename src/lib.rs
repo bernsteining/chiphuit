@@ -72,13 +72,16 @@ impl Emulator {
     fn cycle(&self) {}
 
     fn process_opcode(&self, opcode: u16) {}
+}
 
-    // fn display_screen(&self) {
-    //     self.screen.into_iter().filter(|pixel| match pixel {
-    //         true => println!("▇"),
-    //         false => println!("▇"),
-    //     });
-    // }
+#[wasm_bindgen]
+pub fn handle_input(key: String) {
+    // logging on webpage
+    // let keys = document().create_element("lol").unwrap();
+    // keys.set_inner_html(&format!("<li>{}<li>", &key).to_string());
+    // body().append_child(&keys).unwrap();
+
+    //let text = format!("Keypress: {}", key);
 }
 
 //write opcodes pattern matching logic
@@ -105,8 +108,6 @@ pub fn main() -> Result<(), JsValue> {
         in vec4 position;
 
         void main() {
-
-
             gl_Position = position;
             gl_PointSize = 9.99;
         }
