@@ -1,7 +1,10 @@
 use std::cell::RefCell;
+use std::ops::Add;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
+use wasm_bindgen::Clamped;
 use wasm_bindgen::JsCast;
+use web_sys::{CanvasRenderingContext2d, ImageData};
 use web_sys::{WebGl2RenderingContext, WebGlProgram, WebGlShader};
 
 use js_sys::Math::random;
@@ -95,43 +98,48 @@ pub fn main() -> Result<(), JsValue> {
     let canvas: web_sys::HtmlCanvasElement = canvas.dyn_into::<web_sys::HtmlCanvasElement>()?;
 
     let context = canvas
-        .get_context("webgl2")?
+        .get_context("2d")?
         .unwrap()
-        .dyn_into::<WebGl2RenderingContext>()?;
+        .dyn_into::<web_sys::CanvasRenderingContext2d>()?;
+    // GRAPHICS INIT
+    // let context = canvas
+    //     .get_context("webgl2")?
+    //     .unwrap()
+    //     .dyn_into::<WebGl2RenderingContext>()?;
 
-    let vert_shader = compile_shader(
-        &context,
-        WebGl2RenderingContext::VERTEX_SHADER,
-        r##"#version 300 es
+    // let vert_shader = compile_shader(
+    //     &context,
+    //     WebGl2RenderingContext::VERTEX_SHADER,
+    //     r##"#version 300 es
 
-        in vec4 position;
+    //     in vec4 position;
 
-        void main() {
-            gl_Position = position;
-            gl_PointSize = 9.99;
-        }
-        "##,
-    )?;
+    //     void main() {
+    //         gl_Position = position;
+    //         gl_PointSize = 9.9;
+    //     }
+    //     "##,
+    // )?;
 
-    let frag_shader = compile_shader(
-        &context,
-        WebGl2RenderingContext::FRAGMENT_SHADER,
-        r##"#version 300 es
+    // let frag_shader = compile_shader(
+    //     &context,
+    //     WebGl2RenderingContext::FRAGMENT_SHADER,
+    //     r##"#version 300 es
 
-        precision highp float;
-        out vec4 outColor;
+    //     precision highp float;
+    //     out vec4 outColor;
 
-        void main() {
-            outColor = vec4(1, 1, 1, 1);
-        }
-        "##,
-    )?;
-    let program = link_program(&context, &vert_shader, &frag_shader)?;
-    context.use_program(Some(&program));
+    //     void main() {
+    //         outColor = vec4(1, 1, 1, 1);
+    //     }
+    //     "##,
+    // )?;
+    // let program = link_program(&context, &vert_shader, &frag_shader)?;
+    // context.use_program(Some(&program));
 
-    let position_attribute_location = context.get_attrib_location(&program, "position");
-    let buffer = context.create_buffer().ok_or("Failed to create buffer")?;
-    context.bind_buffer(WebGl2RenderingContext::ARRAY_BUFFER, Some(&buffer));
+    // let position_attribute_location = context.get_attrib_location(&program, "position");
+    // let buffer = context.create_buffer().ok_or("Failed to create buffer")?;
+    // context.bind_buffer(WebGl2RenderingContext::ARRAY_BUFFER, Some(&buffer));
 
     // Note that `Float32Array::view` is somewhat dangerous (hence the
     // `unsafe`!). This is creating a raw view into our module's
@@ -141,36 +149,16 @@ pub fn main() -> Result<(), JsValue> {
     //
     // As a result, after `Float32Array::view` we have to be very careful not to
     // do any memory allocations before it's dropped.
-    //let verticesd: [f32; 9] = [-0.7, -0.9, 0.0, 0.7, -0.9, 0.0, 0.0, 0.7, 0.0];
-    // let verticesd: [f32; 64 * 32 * 2] = (0..64 * 32 * 2)
-    //     .map(|v| rand::thread_rng().gen::<f32>())
-    //     .into_iter()
-    //     .collect::<[f32; 64 * 32 * 2]>();
-    //let mut rng = rand::thread_rng();
-    let mut verticesd = [1.0; 64 * 32 * 2];
-    for x in &mut verticesd {
-        *x = ((random() * 32.0).floor() / 32.0) as f32;
-    }
 
-    unsafe {
-        let positions_array_buf_view = js_sys::Float32Array::view(&verticesd);
+    // let vao = context
+    //     .create_vertex_array()
+    //     .ok_or("Could not create vertex array object")?;
+    // context.bind_vertex_array(Some(&vao));
 
-        context.buffer_data_with_array_buffer_view(
-            WebGl2RenderingContext::ARRAY_BUFFER,
-            &positions_array_buf_view,
-            WebGl2RenderingContext::STATIC_DRAW,
-        );
-    }
+    // context.vertex_attrib_pointer_with_i32(0, 3, WebGl2RenderingContext::FLOAT, false, 0, 0);
+    // context.enable_vertex_attrib_array(position_attribute_location as u32);
 
-    let vao = context
-        .create_vertex_array()
-        .ok_or("Could not create vertex array object")?;
-    context.bind_vertex_array(Some(&vao));
-
-    context.vertex_attrib_pointer_with_i32(0, 3, WebGl2RenderingContext::FLOAT, false, 0, 0);
-    context.enable_vertex_attrib_array(position_attribute_location as u32);
-
-    context.bind_vertex_array(Some(&vao));
+    // context.bind_vertex_array(Some(&vao));
 
     let f = Rc::new(RefCell::new(None));
     let g = f.clone();
@@ -185,17 +173,39 @@ pub fn main() -> Result<(), JsValue> {
 
     let w2 = window();
 
+    // HARDCODE GAME ATM
+
+    let break_out = "129ffcfc80a202ddc100eea204dba100eea2036002610587008610d67171086f388f174f00121770026f108f074f00121500ee22057d04220500ee22057dfc220500ee8080400168ff40ff68015ac0225300ee80b070fb61f880127005a203d0a100ee220b8b948a84220b4b0069014b3f69ff4a0068014a1f68ff4f0122434a1f228500ee00e06b1e6a142205220b221100eefe073e0012936e04fe1500ee6d1e6c1e6b406a1dc901490069ff68ff2205220b22116007e0a1223b6009e0a122332263229312b5";
+
+    // INIT EMULATOR
+    // let emulator = Emulator::new();
+
+    // EVENT LOOP
     *g.borrow_mut() = Some(Closure::wrap(Box::new(move || {
         set_timeout(&w2, t1.borrow().as_ref().unwrap(), 167);
 
         let mut screen_array = [1.0; 64 * 32 * 2];
-        for x in &mut screen_array {
-            *x = ((random() * 32.0).floor() / 32.0) as f32;
-        }
-        draw_screen(&context, screen_array, position_attribute_location as u32);
 
-        // Schedule ourself for another requestAnimationFrame callback.
-        //request_animation_frame(f.borrow().as_ref().unwrap());
+        // for (i, x) in screen_array.iter_mut().enumerate() {
+        //     match i as u32 % 2 {
+        //         // 1 => *x = ((random() * 64.0).floor() / 64.0) as f32,
+        //         // 0 => *x = ((random() * 32.0).floor() / 32.0) as f32,
+        //         1 => *x = 0.9,
+        //         0 => *x = 0.1,
+        //         _ => *x = 0.0,
+        //     }
+        //}
+        // handle input here
+        // compute cpu cycle
+        // draw_screen(&context, screen_array, position_attribute_location as u32);
+
+        draw(
+            &context,
+            600,
+            600,
+            ((random() * 32.0).floor() / 32.0),
+            ((random() * 32.0).floor() / 32.0),
+        );
     }) as Box<dyn FnMut()>));
 
     request_animation_frame(&window(), g.borrow().as_ref().unwrap());
@@ -222,23 +232,36 @@ fn set_timeout(window: &web_sys::Window, f: &Closure<dyn FnMut()>, timeout_ms: i
         .expect("should register `setTimeout` OK")
 }
 
-fn draw_screen(
-    context: &WebGl2RenderingContext,
-    screen_array: [f32; 64 * 32 * 2],
-    position_attribute_location: u32,
-) {
-    unsafe {
-        let positions_array_buf_view = js_sys::Float32Array::view(&screen_array);
+#[wasm_bindgen]
+pub fn draw(
+    ctx: &CanvasRenderingContext2d,
+    width: u32,
+    height: u32,
+    real: f64,
+    imaginary: f64,
+) -> Result<(), JsValue> {
+    // The real workhorse of this algorithm, generating pixel data
+    let c = Complex { real, imaginary };
+    let mut data = get_julia_set(width, height, c);
+    let data = ImageData::new_with_u8_clamped_array_and_sh(Clamped(&mut data), width, height)?;
+    ctx.put_image_data(&data, 0.0, 0.0)
+}
 
-        context.buffer_data_with_array_buffer_view(
-            WebGl2RenderingContext::ARRAY_BUFFER,
-            &positions_array_buf_view,
-            WebGl2RenderingContext::STATIC_DRAW,
-        );
-    }
+fn draw_screen(context: &CanvasRenderingContext2d, screen_array: [f32; 64 * 32 * 2]) {
+    // position_attribute_location: u32,
+    // ) {
+    //     unsafe {
+    //         let positions_array_buf_view = js_sys::Float32Array::view(&screen_array);
 
-    context.enable_vertex_attrib_array(position_attribute_location as u32);
-    context.draw_arrays(WebGl2RenderingContext::POINTS, 0, 64 * 32 * 2 / 3);
+    //         context.buffer_data_with_array_buffer_view(
+    //             WebGl2RenderingContext::ARRAY_BUFFER,
+    //             &positions_array_buf_view,
+    //             WebGl2RenderingContext::STATIC_DRAW,
+    //         );
+    //     }
+
+    //     context.enable_vertex_attrib_array(position_attribute_location as u32);
+    //     context.draw_arrays(WebGl2RenderingContext::POINTS, 0, 1365);
 }
 
 pub fn compile_shader(
@@ -265,16 +288,6 @@ pub fn compile_shader(
     }
 }
 
-fn document() -> web_sys::Document {
-    window()
-        .document()
-        .expect("should have a document on window")
-}
-
-fn body() -> web_sys::HtmlElement {
-    document().body().expect("document should have a body")
-}
-
 pub fn link_program(
     context: &WebGl2RenderingContext,
     vert_shader: &WebGlShader,
@@ -298,5 +311,71 @@ pub fn link_program(
         Err(context
             .get_program_info_log(&program)
             .unwrap_or_else(|| String::from("Unknown error creating program object")))
+    }
+}
+
+fn get_julia_set(width: u32, height: u32, c: Complex) -> Vec<u8> {
+    let mut data = Vec::new();
+
+    let param_i = 1.5;
+    let param_r = 1.5;
+    let scale = 0.005;
+
+    for x in 0..width {
+        for y in 0..height {
+            let z = Complex {
+                real: y as f64 * scale - param_r,
+                imaginary: x as f64 * scale - param_i,
+            };
+            let iter_index = get_iter_index(z, c);
+            data.push((iter_index / 4) as u8);
+            data.push((iter_index / 2) as u8);
+            data.push(iter_index as u8);
+            data.push(255);
+        }
+    }
+
+    data
+}
+
+fn get_iter_index(z: Complex, c: Complex) -> u32 {
+    let mut iter_index: u32 = 0;
+    let mut z = z;
+    while iter_index < 900 {
+        if z.norm() > 2.0 {
+            break;
+        }
+        z = z.square() + c;
+        iter_index += 1;
+    }
+    iter_index
+}
+
+#[derive(Clone, Copy, Debug)]
+struct Complex {
+    real: f64,
+    imaginary: f64,
+}
+
+impl Complex {
+    fn square(self) -> Complex {
+        let real = (self.real * self.real) - (self.imaginary * self.imaginary);
+        let imaginary = 2.0 * self.real * self.imaginary;
+        Complex { real, imaginary }
+    }
+
+    fn norm(&self) -> f64 {
+        (self.real * self.real) + (self.imaginary * self.imaginary)
+    }
+}
+
+impl Add<Complex> for Complex {
+    type Output = Complex;
+
+    fn add(self, rhs: Complex) -> Complex {
+        Complex {
+            real: self.real + rhs.real,
+            imaginary: self.imaginary + rhs.imaginary,
+        }
     }
 }
