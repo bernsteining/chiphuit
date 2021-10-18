@@ -15,61 +15,38 @@ body {
 }
 
 canvas {
-  padding-left: 0;
-  padding-right: 0;
-
+  margin: auto;
+  position: float;
+  width: 640px;
+  height:320px;
+  display: flex;
+  /* necessary for neat pixels */
+  image-rendering: crisp-edges;
 }
 
-a.welcome_text{
-	color: DarkMagenta;
-	font-size:40px;
-	white-space: nowrap;
-	font-family: monaco,Consolas,Lucida Console,monospace;
-}
-
-.play{
-
-	width: 500px;
-  height: 500px;
-
-  position: absolute;
-  top:0;
-  bottom:0;
-  left: 0;
-  right: 0;
-
-  margin-left: auto;
-  margin-right: auto;
-  margin-top: 250px;
-
-	font-family:"Times New Roman", Times, serif;
-	font-size:36px;
-	color:DarkMagenta;
-	align-items: center;
-
-}
-
-/*Button*/
-.button {
+/*custom-file-upload*/
+.custom-file-upload {
 	position: relative;
     background-color: darkmagenta;
-    border: none;
-    padding: 7px;
+    border-radius: 8%;
+    display: block;
+    position: float;
     width: 100px;
     text-align: center;
+
     -webkit-transition-duration: 0.4s; /* Safari */
     transition-duration: 0.4s;
     text-decoration: none;
     overflow: hidden;
 }
 
-.button:hover{
+.custom-file-upload:hover{
    background:#fff;
    box-shadow:0px 2px 10px 5px #97B1BF;
    color:#000;
 }
 
-.button:after {
+.custom-file-upload:after {
     content: "";
     background:darkmagenta;
     display: block;
@@ -82,45 +59,30 @@ a.welcome_text{
     transition: all 0.8s
 }
 
-.button:active:after {
+.custom-file-upload:active:after {
     padding: 0;
     margin: 0;
     opacity: 1;
     transition: 0s
 }
 
-.alert_fail {
-	padding: 20px;
-	background-color: #f44336;
-	color: white;
-	margin-bottom: 15px;
-  }
+input[type="file"] {
+  display: none;
+}
+.custom-file-upload {
+  border: 1px solid #ccc;
+  display: inline-block;
+  padding: 6px 12px;
+  cursor: pointer;
 
-  .alert_success{
-	padding: 20px;
-	background-color:green;
-	color: white;
-	margin-bottom: 15px;
-  }
+}
 
-  /* The close button */
-  .closebtn {
-	margin-left: 15px;
-	color: white;
-	font-weight: bold;
-	float: right;
-	font-size: 22px;
-	line-height: 20px;
-	cursor: pointer;
-	transition: 0.3s;
-  }
-
-  /* When moving the mouse over the close button */
-  .closebtn:hover {
+  /* When moving the mouse over the close custom-file-upload */
+.closebtn:hover {
 	color: black;
   }
 
-  .footer {
+.footer {
 	position: fixed;
 	left: 0;
 	bottom: 0;
@@ -129,3 +91,28 @@ a.welcome_text{
 	text-align: center;
   }
 
+
+.keypad-base {
+  max-width: 1085px;
+  border-radius: 10px;
+  display: grid;
+  grid-template-columns: repeat(8, 30px);
+  grid-template-rows: repeat(5, 60px);
+  grid-gap: 5px;
+  position: flex;
+}
+
+.key {
+  background-color: darkmagenta;
+  border: 2px solid black;
+  border-radius: 5px;
+  grid-column: span 2;
+  font-size: 20px;
+  text-align: center;
+  padding-top: 17px;
+}
+
+.key:hover {
+border: 1px solid #eeeeee;
+background-color: rgb(243, 243, 243);
+}
