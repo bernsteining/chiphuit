@@ -5,3 +5,5 @@ TODO:
 * Parse opcodes
 * Bridge between opcodes XOR operations and webgl screen
 * stack handle etc
+* improve layout and alignment
+* use nom to parse bits instead of galering avec les u8
