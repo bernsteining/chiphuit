@@ -32,6 +32,8 @@ features = [
   'WebGlProgram',
   'WebGlShader',
   'Window',
+  'CanvasRenderingContext2d',
+  'ImageData'
 ]
 
 
