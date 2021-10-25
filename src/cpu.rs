@@ -1,3 +1,4 @@
+use js_sys::Math::random;
 use wasm_bindgen::prelude::*;
 
 pub const FONTS: [u8; 80] = [
@@ -55,10 +56,10 @@ impl Emulator {
     pub fn new() -> Emulator {
         Emulator {
             current_opcode: OpCode {
-                first_nibble: 0,
-                second_nibble: 0,
-                third_nibble: 0,
-                fourth_nibble: 0,
+                first_nibble: 0 as u8,
+                second_nibble: 0 as u8,
+                third_nibble: 0 as u8,
+                fourth_nibble: 0 as u8,
             },
             memory: [0; 4096],
 
@@ -184,21 +185,47 @@ impl Emulator {
         }
     }
 
-    fn clear_screen(&mut self) {}
+    // utils for factorization / readability
+
+    fn get_third_and_fourth_nibbles_inline(&mut self) -> u8 {
+        return self.current_opcode.third_nibble << 4 | self.current_opcode.fourth_nibble;
+    }
+
+    fn get_vx(&mut self) -> u8 {
+        self.registers[self.current_opcode.second_nibble as usize]
+    }
+
+    fn get_vy(&mut self) -> u8 {
+        self.registers[self.current_opcode.third_nibble as usize]
+    }
+
+    // fn get_three_last_nibbles(&mut self) -> u16 {}
+
+    fn skip_next_instruction(&mut self) {}
+
+    fn clear_screen(&mut self) {
+        self.screen = [false; 64 * 32];
+    }
     fn goto(&mut self) {}
     fn call_subroutine(&mut self) {}
-    fn skip_next_instruction_if_vx_equals_34(&mut self) {}
+    fn skip_next_instruction_if_vx_equals_34(&mut self) {
+        if self.registers[self.current_opcode.second_nibble as usize]
+            == self.get_third_and_fourth_nibbles_inline()
+        {
+            self.skip_next_instruction();
+        }
+    }
     fn skip_next_instruction_if_not_vx_equals_34(&mut self) {}
     fn skip_next_instruction_if_vv_equals_vy(&mut self) {}
 
     fn set_vx_to_34(&mut self) {
         self.registers[self.current_opcode.second_nibble as usize] =
-            self.current_opcode.third_nibble << 4 | self.current_opcode.fourth_nibble;
+            self.get_third_and_fourth_nibbles_inline();
     }
 
     fn add_34_to_vx(&mut self) {
         self.registers[self.current_opcode.second_nibble as usize] +=
-            self.current_opcode.third_nibble << 4 | self.current_opcode.fourth_nibble;
+            self.get_third_and_fourth_nibbles_inline();
     }
 
     fn set_vx_as_vy(&mut self) {
@@ -206,9 +233,18 @@ impl Emulator {
             self.current_opcode.third_nibble;
     }
 
-    fn set_vx_as_vx_or_vy(&mut self) {}
-    fn set_vx_as_vx_and_vy(&mut self) {}
-    fn set_vx_as_vx_xor_vy(&mut self) {}
+    fn set_vx_as_vx_or_vy(&mut self) {
+        self.registers[self.current_opcode.second_nibble as usize] |= self.get_vy()
+    }
+
+    fn set_vx_as_vx_and_vy(&mut self) {
+        self.registers[self.current_opcode.second_nibble as usize] &= self.get_vy()
+    }
+
+    fn set_vx_as_vx_xor_vy(&mut self) {
+        self.registers[self.current_opcode.second_nibble as usize] ^= self.get_vy()
+    }
+
     fn incr_vx_with_vy_and_handle_carry_flag(&mut self) {}
     fn decr_vx_with_vy_and_handle_carry_flag(&mut self) {}
     fn store_vx_lsb_in_vf_and_shift_vx_to_the_right(&mut self) {}
@@ -217,16 +253,37 @@ impl Emulator {
     fn skip_next_instruction_if_vx_neq_v2(&mut self) {}
     fn set_i_as_234(&mut self) {}
     fn set_pc_as_v0_plus_234(&mut self) {}
-    fn set_vx_as_rand_and_34(&mut self) {}
+
+    fn set_vx_as_rand_and_34(&mut self) {
+        self.registers[self.current_opcode.second_nibble as usize] =
+            ((random() * 255.0) as u8) & self.get_third_and_fourth_nibbles_inline()
+    }
+
     fn draw_sprite_at_vx_vy_of_4_pixels(&mut self) {}
     fn skip_next_instruction_if_vx_key_pressed(&mut self) {}
     fn skip_next_instruction_if_vx_key_isnt_pressed(&mut self) {}
-    fn set_vx_as_delay_timer(&mut self) {}
+
+    fn set_vx_as_delay_timer(&mut self) {
+        self.registers[self.current_opcode.second_nibble as usize] = self.delay_timer
+    }
+
     fn wait_for_keypress_then_store_it_in_vx(&mut self) {}
-    fn set_delay_timer_as_vx(&mut self) {}
-    fn set_sound_timer_as_vx(&mut self) {}
-    fn increment_i_with_vx(&mut self) {}
-    fn set_i_as_char_font_with_vx_index(&mut self) {}
+
+    fn set_delay_timer_as_vx(&mut self) {
+        self.delay_timer = self.get_vx()
+    }
+
+    fn set_sound_timer_as_vx(&mut self) {
+        self.sound_timer = self.get_vx()
+    }
+
+    fn increment_i_with_vx(&mut self) {
+        self.index_register += self.get_vx() as u16
+    }
+
+    fn set_i_as_char_font_with_vx_index(&mut self) {
+        // self.index_register = FONTS[self.get_vx() as usize] as u16
+    }
     fn wtf(&mut self) {}
     fn store_v0_to_vx_in_memory_from_i(&mut self) {}
     fn fill_v0_to_vx_with_memory_from_i(&mut self) {}
