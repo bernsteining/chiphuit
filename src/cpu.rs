@@ -124,6 +124,231 @@ impl Emulator {
             | self.memory[(self.program_counter as usize + 1) as usize] as u16
     }
 
+        // utils for factorization / readability
+
+        fn get_third_and_fourth_nibbles_inline(&mut self) -> u8 {
+            return self.current_opcode.third_nibble << 4 | self.current_opcode.fourth_nibble;
+        }
+
+        fn get_vx(&mut self) -> u8 {
+            self.registers[self.current_opcode.second_nibble as usize]
+        }
+
+        fn get_vy(&mut self) -> u8 {
+            self.registers[self.current_opcode.third_nibble as usize]
+        }
+
+        // fn get_three_last_nibbles(&mut self) -> u16 {}
+
+        fn skip_next_instruction(&mut self) {}
+
+        // Calls machine code routine (RCA 1802 for COSMAC VIP) at
+        // address NNN. Not necessary for most ROMs.
+        fn _0NNN(&mut self){}
+
+        // Clears the screen.
+        fn _00E0(&mut self) {
+            self.screen = [false; 64 * 32];
+        }
+
+        // Returns from a subroutine.
+        // return;
+        fn _00EE(&mut self){}
+
+        // Jumps to address NNN.
+        // goto NNN;
+        fn 1NNN(&mut self) {}
+
+        // Calls subroutine at NNN.
+        // *(0xNNN)()
+        fn 2NNN(&mut self) {}
+
+        // Skips the next instruction if VX equals NN.
+        // (Usually the next instruction is a jump to skip a code block)
+        // if (Vx == NN)
+        fn 3XNN(&mut self) {
+            if self.registers[self.current_opcode.second_nibble as usize]
+                == self.get_third_and_fourth_nibbles_inline()
+            {
+                self.skip_next_instruction();
+            }
+        }
+
+        // Skips the next instruction if VX does not equal NN.
+        // (Usually the next instruction is a jump to skip a code block);
+        // if (Vx != NN)
+        fn 4XNN(&mut self) {}
+
+        // Skips the next instruction if VX equals VY.
+        // (Usually the next instruction is a jump to skip a code block).
+        // if (Vx == Vy)
+        fn 5XY0(&mut self) {}
+
+        // Sets VX to NN.
+        // Vx = N
+        fn 6XNN(&mut self) {
+            self.registers[self.current_opcode.second_nibble as usize] =
+                self.get_third_and_fourth_nibbles_inline();
+        }
+
+        // Adds NN to VX. (Carry flag is not changed);
+        // Vx += N
+        fn 7XNN(&mut self) {
+            self.registers[self.current_opcode.second_nibble as usize] +=
+                self.get_third_and_fourth_nibbles_inline();
+        }
+
+        // Sets VX to the value of VY.
+        // Vx = Vy
+        fn 8XY0(&mut self) {
+            self.registers[self.current_opcode.second_nibble as usize] =
+                self.current_opcode.third_nibble;
+        }
+
+        // Sets VX to VX or VY. (Bitwise OR operation).
+        // Vx |= Vy
+        fn 8XY1(&mut self) {
+            self.registers[self.current_opcode.second_nibble as usize] |= self.get_vy()
+        }
+
+        // Sets VX to VX and VY. (Bitwise AND operation).
+        // Vx &= Vy
+        fn 8XY2(&mut self) {
+            self.registers[self.current_opcode.second_nibble as usize] &= self.get_vy()
+        }
+
+        // Sets VX to VX xor VY.
+        // Vx ^= Vy
+        fn 8XY3(&mut self) {
+            self.registers[self.current_opcode.second_nibble as usize] ^= self.get_vy()
+        }
+
+        // Adds VY to VX. VF is set to 1 when there's a carry,
+        // and to 0 when there is not.
+        // Vx += Vy
+        fn 8XY4(&mut self) {}
+
+        // VY is subtracted from VX. VF is set to 0 when there's a borrow,
+        // and 1 when there is not.
+        // Vx -= Vy
+        fn 8XY5(&mut self) {}
+
+        // Stores the least significant bit of VX in VF and then shifts
+        // VX to the right by 1.
+        // Vx >>= 1
+        fn 8XY6(&mut self) {}
+
+        // Sets VX to VY minus VX. VF is set to 0 when there's a borrow,
+        // and 1 when there is not.
+        // Vx = Vy - Vx
+        fn 8XY7(&mut self) {}
+
+        // Stores the most significant bit of VX in VF
+        // and then shifts VX to the left by 1.
+        // Vx <<= 1
+        fn 8XYE(&mut self) {}
+
+        // Skips the next instruction if VX does not equal VY.
+        // (Usually the next instruction is a jump to skip a code block)
+        // if (Vx != Vy)
+        fn 9XY0(&mut self) {}
+
+        // Sets I to the address NNN.
+        // I = NNN
+        fn ANNN(&mut self) {}
+
+        // Jumps to the address NNN plus V0.
+        // PC = V0 + NNN
+        fn BNNN(&mut self) {}
+
+        // Sets VX to the result of a bitwise and operation on a random number
+        // (Typically: 0 to 255) and NN. Vx = rand() & NN
+        fn CXNN(&mut self) {
+            self.registers[self.current_opcode.second_nibble as usize] =
+                ((random() * 255.0) as u8) & self.get_third_and_fourth_nibbles_inline()
+        }
+
+        // Draws a sprite at coordinate (VX, VY) that has a width of 8 pixels and
+        // a height of N pixels. Each row of 8 pixels is read as bit-coded starting
+        // from memory location I; I value does not change after the execution of
+        // this instruction. As described above, VF is set to 1 if any screen pixels
+        // are flipped from set to unset when the sprite is drawn, and to 0 if that
+        // does not happen
+        // draw(Vx, Vy, N)
+        fn DXYN(&mut self) {
+            let height = self.current_opcode.fourth_nibble;
+        }
+
+        // Skips the next instruction if the key stored in VX is pressed.
+        // (Usually the next instruction is a jump to skip a code block);
+        // if (key() == Vx)
+        fn EX9E(&mut self) {}
+
+        // Skips the next instruction if the key stored in VX is not pressed.
+        // (Usually the next instruction is a jump to skip a code block).
+        // if (key() != Vx)
+        fn EXA1(&mut self) {}
+
+        // Sets VX to the value of the delay timer.
+        // Vx = get_delay()
+        fn FX07(&mut self) {
+            self.registers[self.current_opcode.second_nibble as usize] = self.delay_timer
+        }
+
+        // A key press is awaited, and then stored in VX. (Blocking Operation.
+        // All instruction halted until next key event);
+        // Vx = get_key()
+        fn FX0A(&mut self) {}
+
+        // Sets the delay timer to VX.
+        // delay_timer(Vx)
+        fn FX15(&mut self) {
+            self.delay_timer = self.get_vx()
+        }
+
+        // Sets the sound timer to VX.
+        // sound_timer(Vx)
+        fn FX18(&mut self) {
+            self.sound_timer = self.get_vx()
+        }
+
+        // Adds VX to I. VF is not affected.
+        // I += Vx
+        fn FX1E(&mut self) {
+            self.index_register += self.get_vx() as u16
+        }
+
+        // Sets I to the location of the sprite for the character in VX.
+        // Characters 0-F (in hexadecimal) are represented by a 4x5 font.
+        // I = sprite_addr[Vx]
+        fn FX29(&mut self) {
+            // self.index_register = FONTS[self.get_vx() as usize] as u16
+        }
+
+        // Stores the binary-coded decimal representation of VX, with the most
+        // significant of three digits at the address in I, the middle digit at I
+        // plus 1, and the least significant digit at I plus 2. (In other words, take
+        // the decimal representation of VX, place the hundreds digit in memory at
+        // location in I, the tens digit at location I+1, and the ones digit at
+        // location I+2.).
+        // set_BCD(Vx)
+        // *(I+0) = BCD(3);
+        // *(I+1) = BCD(2);
+        // *(I+2) = BCD(1);
+        fn FX33(&mut self) {}
+
+        // Stores from V0 to VX (including VX) in memory, starting at address I.
+        // The offset from I is increased by 1 for each value written, but I
+        // itself is left unmodified
+        // reg_dump(Vx, &I)
+        fn FX55(&mut self) {}
+
+        // Fills from V0 to VX (including VX) with values from memory, starting at
+        // address I. The offset from I is increased by 1 for each value written,
+        // but I itself is left unmodified.
+        // reg_load(Vx, &I)
+        fn FX65(&mut self) {}
+
     fn cycle(&mut self) {
         let opcode = self.fetch_opcode();
 
@@ -145,148 +370,45 @@ impl Emulator {
         };
 
         match (first_nibble, second_nibble, third_nibble, fourth_nibble) {
-            (0, _, _, _) => println!("call machine code routine"),
-            (0, 0, 0xE, 0xE) => self.clear_screen(),
-            (1, _, _, _) => self.goto(),
-            (2, _, _, _) => self.call_subroutine(),
-            (3, _, _, _) => self.skip_next_instruction_if_vx_equals_34(),
-            (4, _, _, _) => self.skip_next_instruction_if_not_vx_equals_34(),
-            (5, _, _, 0) => self.skip_next_instruction_if_vv_equals_vy(),
-            (6, _, _, _) => self.set_vx_to_34(),
-            (7, _, _, _) => self.add_34_to_vx(),
-            (8, _, _, 0) => self.set_vx_as_vy(),
-            (8, _, _, 1) => self.set_vx_as_vx_or_vy(),
-            (8, _, _, 2) => self.set_vx_as_vx_and_vy(),
-            (8, _, _, 3) => self.set_vx_as_vx_xor_vy(),
-            (8, _, _, 4) => self.incr_vx_with_vy_and_handle_carry_flag(),
-            (8, _, _, 5) => self.decr_vx_with_vy_and_handle_carry_flag(),
-            (8, _, _, 6) => self.store_vx_lsb_in_vf_and_shift_vx_to_the_right(),
-            (8, _, _, 7) => self.store_v3_minus_v2_in_v2_and_handle_carry_flag(),
-            (8, _, _, 0xE) => self.store_v2_lsb_in_vf_and_shift_v2_to_the_right(),
-            (9, _, _, 0) => self.skip_next_instruction_if_vx_neq_v2(),
-            (0xA, _, _, _) => self.set_i_as_234(),
-            (0xB, _, _, _) => self.set_pc_as_v0_plus_234(),
-            (0xC, _, _, _) => self.set_vx_as_rand_and_34(),
-            (0xD, _, _, _) => self.draw_sprite_at_vx_vy_of_4_pixels(),
-            (0xE, _, 9, 0xE) => self.skip_next_instruction_if_vx_key_pressed(),
-            (0xE, _, 0xA, 1) => self.skip_next_instruction_if_vx_key_isnt_pressed(),
-            (0xF, _, 0, 7) => self.set_vx_as_delay_timer(),
-            (0xF, _, 0, 0xA) => self.wait_for_keypress_then_store_it_in_vx(),
-            (0xF, _, 1, 5) => self.set_delay_timer_as_vx(),
-            (0xF, _, 1, 8) => self.set_sound_timer_as_vx(),
-            (0xF, _, 1, 0xE) => self.increment_i_with_vx(),
-            (0xF, _, 2, 9) => self.set_i_as_char_font_with_vx_index(),
-            (0xF, _, 3, 3) => self.wtf(),
-            (0xF, _, 5, 5) => self.store_v0_to_vx_in_memory_from_i(),
-            (0xF, _, 6, 5) => self.fill_v0_to_vx_with_memory_from_i(),
+            (0, _, _, _) => self._0NNN(),
+            (0, 0, 0xE, 0xE) => self._00EE(),
+            (1, _, _, _) => self.1NNN(),
+            (2, _, _, _) => self.2NNN(),
+            (3, _, _, _) => self.3XNN(),
+            (4, _, _, _) => self.4XNN(),
+            (5, _, _, 0) => self.5XY0(),
+            (6, _, _, _) => self.6XNN(),
+            (7, _, _, _) => self.7XNN(),
+            (8, _, _, 0) => self.8XY0(),
+            (8, _, _, 1) => self.8XY1(),
+            (8, _, _, 2) => self.8XY2(),
+            (8, _, _, 3) => self.8XY3(),
+            (8, _, _, 4) => self.8XY4(),
+            (8, _, _, 5) => self.8XY5(),
+            (8, _, _, 6) => self.8XY6(),
+            (8, _, _, 7) => self.8XY7(),
+            (8, _, _, 0xE) => self.8XYE(),
+            (9, _, _, 0) => self.9XY0(),
+            (0xA, _, _, _) => self.ANNN(),
+            (0xB, _, _, _) => self.BNNN(),
+            (0xC, _, _, _) => self.CXNN(),
+            (0xD, _, _, _) => self.DXYN(),
+            (0xE, _, 9, 0xE) => self.EX9E(),
+            (0xE, _, 0xA, 1) => self.EXA1(),
+            (0xF, _, 0, 7) => self.FX07(),
+            (0xF, _, 0, 0xA) => self.FX0A(),
+            (0xF, _, 1, 5) => self.FX15(),
+            (0xF, _, 1, 8) => self.FX18(),
+            (0xF, _, 1, 0xE) => self.FX1E(),
+            (0xF, _, 2, 9) => self.FX29(),
+            (0xF, _, 3, 3) => self.FX33(),
+            (0xF, _, 5, 5) => self.FX55(),
+            (0xF, _, 6, 5) => self.FX65(),
             _ => {
                 println!("Unknown opcode, instructions unclear, got stuck in the washing machine.")
             }
         }
     }
-
-    // utils for factorization / readability
-
-    fn get_third_and_fourth_nibbles_inline(&mut self) -> u8 {
-        return self.current_opcode.third_nibble << 4 | self.current_opcode.fourth_nibble;
-    }
-
-    fn get_vx(&mut self) -> u8 {
-        self.registers[self.current_opcode.second_nibble as usize]
-    }
-
-    fn get_vy(&mut self) -> u8 {
-        self.registers[self.current_opcode.third_nibble as usize]
-    }
-
-    // fn get_three_last_nibbles(&mut self) -> u16 {}
-
-    fn skip_next_instruction(&mut self) {}
-
-    fn clear_screen(&mut self) {
-        self.screen = [false; 64 * 32];
-    }
-    fn goto(&mut self) {}
-    fn call_subroutine(&mut self) {}
-    fn skip_next_instruction_if_vx_equals_34(&mut self) {
-        if self.registers[self.current_opcode.second_nibble as usize]
-            == self.get_third_and_fourth_nibbles_inline()
-        {
-            self.skip_next_instruction();
-        }
-    }
-    fn skip_next_instruction_if_not_vx_equals_34(&mut self) {}
-    fn skip_next_instruction_if_vv_equals_vy(&mut self) {}
-
-    fn set_vx_to_34(&mut self) {
-        self.registers[self.current_opcode.second_nibble as usize] =
-            self.get_third_and_fourth_nibbles_inline();
-    }
-
-    fn add_34_to_vx(&mut self) {
-        self.registers[self.current_opcode.second_nibble as usize] +=
-            self.get_third_and_fourth_nibbles_inline();
-    }
-
-    fn set_vx_as_vy(&mut self) {
-        self.registers[self.current_opcode.second_nibble as usize] =
-            self.current_opcode.third_nibble;
-    }
-
-    fn set_vx_as_vx_or_vy(&mut self) {
-        self.registers[self.current_opcode.second_nibble as usize] |= self.get_vy()
-    }
-
-    fn set_vx_as_vx_and_vy(&mut self) {
-        self.registers[self.current_opcode.second_nibble as usize] &= self.get_vy()
-    }
-
-    fn set_vx_as_vx_xor_vy(&mut self) {
-        self.registers[self.current_opcode.second_nibble as usize] ^= self.get_vy()
-    }
-
-    fn incr_vx_with_vy_and_handle_carry_flag(&mut self) {}
-    fn decr_vx_with_vy_and_handle_carry_flag(&mut self) {}
-    fn store_vx_lsb_in_vf_and_shift_vx_to_the_right(&mut self) {}
-    fn store_v3_minus_v2_in_v2_and_handle_carry_flag(&mut self) {}
-    fn store_v2_lsb_in_vf_and_shift_v2_to_the_right(&mut self) {}
-    fn skip_next_instruction_if_vx_neq_v2(&mut self) {}
-    fn set_i_as_234(&mut self) {}
-    fn set_pc_as_v0_plus_234(&mut self) {}
-
-    fn set_vx_as_rand_and_34(&mut self) {
-        self.registers[self.current_opcode.second_nibble as usize] =
-            ((random() * 255.0) as u8) & self.get_third_and_fourth_nibbles_inline()
-    }
-
-    fn draw_sprite_at_vx_vy_of_4_pixels(&mut self) {}
-    fn skip_next_instruction_if_vx_key_pressed(&mut self) {}
-    fn skip_next_instruction_if_vx_key_isnt_pressed(&mut self) {}
-
-    fn set_vx_as_delay_timer(&mut self) {
-        self.registers[self.current_opcode.second_nibble as usize] = self.delay_timer
-    }
-
-    fn wait_for_keypress_then_store_it_in_vx(&mut self) {}
-
-    fn set_delay_timer_as_vx(&mut self) {
-        self.delay_timer = self.get_vx()
-    }
-
-    fn set_sound_timer_as_vx(&mut self) {
-        self.sound_timer = self.get_vx()
-    }
-
-    fn increment_i_with_vx(&mut self) {
-        self.index_register += self.get_vx() as u16
-    }
-
-    fn set_i_as_char_font_with_vx_index(&mut self) {
-        // self.index_register = FONTS[self.get_vx() as usize] as u16
-    }
-    fn wtf(&mut self) {}
-    fn store_v0_to_vx_in_memory_from_i(&mut self) {}
-    fn fill_v0_to_vx_with_memory_from_i(&mut self) {}
 }
 
 #[wasm_bindgen]
