@@ -3,7 +3,7 @@ use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::Clamped;
 use wasm_bindgen::JsCast;
-use web_sys::ImageData;
+use web_sys::{CanvasRenderingContext2d, ImageData};
 
 use js_sys::Math::random;
 
@@ -51,24 +51,46 @@ pub fn main() -> Result<(), JsValue> {
 
         // handle input here
         // compute cpu cycle
-        // draw_screen(&context, screen_array, position_attribute_location as u32);
 
-        let mut data = [0; 64 * 32 * 4];
-        for (i, x) in data.iter_mut().enumerate() {
-            *x = (random() * 255.0) as u8;
+        // random black and white screen
+        let mut screen = [false; 64 * 32];
+        for i in 0..64 * 32 {
+            screen[i] = match random() {
+                0.0..=0.5 => false,
+                _ => true,
+            }
         }
-        let data = ImageData::new_with_u8_clamped_array_and_sh(
-            Clamped(&mut data),
-            graphics::WIDTH,
-            graphics::HEIGHT,
-        )
-        .unwrap();
-        context.put_image_data(&data, 0.0, 0.0);
+
+        draw_screen(&context, screen);
     }) as Box<dyn FnMut()>));
 
     graphics::request_animation_frame(&graphics::window(), g.borrow().as_ref().unwrap());
 
     Ok(())
+}
+
+fn draw_screen(context: &CanvasRenderingContext2d, boolean_screen: [bool; 64 * 32]) {
+    let mut graphic_screen = [0; 64 * 32 * 4];
+    for (i, x) in boolean_screen.iter().enumerate() {
+        if x == &false {
+            graphic_screen[4 * i + 1] = 0;
+            graphic_screen[4 * i + 2] = 0;
+            graphic_screen[4 * i + 3] = 0;
+            graphic_screen[4 * i] = 0;
+        } else {
+            graphic_screen[4 * i + 1] = 255;
+            graphic_screen[4 * i + 2] = 255;
+            graphic_screen[4 * i + 3] = 255;
+            graphic_screen[4 * i] = 255;
+        }
+    }
+    let graphic_screen = ImageData::new_with_u8_clamped_array_and_sh(
+        Clamped(&mut graphic_screen),
+        graphics::WIDTH,
+        graphics::HEIGHT,
+    )
+    .unwrap();
+    context.put_image_data(&graphic_screen, 0.0, 0.0);
 }
 
 fn set_timeout(window: &web_sys::Window, f: &Closure<dyn FnMut()>, timeout_ms: i32) -> i32 {
