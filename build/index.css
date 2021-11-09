@@ -1,24 +1,23 @@
-html{
-	background:WhiteSmoke;
-	/*background-image:url("background.png");
+html {
+  background: WhiteSmoke;
+  /*background-image:url("background.png");
 	background-repeat: no-repeat;
 	background-size: cover;*/
-
 }
 body {
-	height: 100%;
-	margin:0;
-	padding:0;
+  height: 100%;
+  margin: 0;
+  padding: 0;
   margin-left: auto;
   margin-right: auto;
-	text-align:center;
+  text-align: center;
 }
 
 canvas {
   margin: auto;
   position: float;
   width: 640px;
-  height:320px;
+  height: 320px;
   display: flex;
   /* necessary for neat pixels */
   image-rendering: crisp-edges;
@@ -26,44 +25,44 @@ canvas {
 
 /*custom-file-upload*/
 .custom-file-upload {
-	position: relative;
-    background-color: darkmagenta;
-    border-radius: 8%;
-    display: block;
-    position: float;
-    width: 100px;
-    text-align: center;
+  position: relative;
+  background-color: darkmagenta;
+  border-radius: 8%;
+  display: block;
+  position: float;
+  width: 100px;
+  text-align: center;
 
-    -webkit-transition-duration: 0.4s; /* Safari */
-    transition-duration: 0.4s;
-    text-decoration: none;
-    overflow: hidden;
+  -webkit-transition-duration: 0.4s; /* Safari */
+  transition-duration: 0.4s;
+  text-decoration: none;
+  overflow: hidden;
 }
 
-.custom-file-upload:hover{
-   background:#fff;
-   box-shadow:0px 2px 10px 5px #97B1BF;
-   color:#000;
+.custom-file-upload:hover {
+  background: #fff;
+  box-shadow: 0px 2px 10px 5px #97b1bf;
+  color: #000;
 }
 
 .custom-file-upload:after {
-    content: "";
-    background:darkmagenta;
-    display: block;
-    position: absolute;
-    padding-top: 300%;
-    padding-left: 350%;
-    margin-left: -20px !important;
-    margin-top: -120%;
-    opacity: 0;
-    transition: all 0.8s
+  content: "";
+  background: darkmagenta;
+  display: block;
+  position: absolute;
+  padding-top: 300%;
+  padding-left: 350%;
+  margin-left: -20px !important;
+  margin-top: -120%;
+  opacity: 0;
+  transition: all 0.8s;
 }
 
 .custom-file-upload:active:after {
-    padding: 0;
-    margin: 0;
-    opacity: 1;
-    transition: 0s
+  padding: 0;
+  margin: 0;
+  opacity: 1;
+  transition: 0s;
 }
 
 input[type="file"] {
@@ -74,32 +73,30 @@ input[type="file"] {
   display: inline-block;
   padding: 6px 12px;
   cursor: pointer;
-
 }
 
-  /* When moving the mouse over the close custom-file-upload */
+/* When moving the mouse over the close custom-file-upload */
 .closebtn:hover {
-	color: black;
-  }
+  color: black;
+}
 
 .footer {
-	position: fixed;
-	left: 0;
-	bottom: 0;
-	width: 100%;
-	color: black;
-	text-align: center;
-  }
-
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  color: black;
+  text-align: center;
+}
 
 .keypad-base {
-  max-width: 1085px;
+  max-width: 300px;
   border-radius: 10px;
   display: grid;
   grid-template-columns: repeat(8, 30px);
   grid-template-rows: repeat(5, 60px);
   grid-gap: 5px;
-  position: flex;
+  margin: 45px auto;
 }
 
 .key {
@@ -113,6 +110,6 @@ input[type="file"] {
 }
 
 .key:hover {
-border: 1px solid #eeeeee;
-background-color: rgb(243, 243, 243);
+  border: 1px solid #eeeeee;
+  background-color: rgb(243, 243, 243);
 }
