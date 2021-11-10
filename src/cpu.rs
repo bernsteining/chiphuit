@@ -130,6 +130,12 @@ impl Emulator {
         return self.current_opcode.third_nibble << 4 | self.current_opcode.fourth_nibble;
     }
 
+    fn get_second_third_fourth_nibbles_inline(&mut self) -> u16 {
+        (self.current_opcode.second_nibble as u16) << 8
+            | (self.current_opcode.third_nibble as u16) << 4
+            | self.current_opcode.fourth_nibble as u16
+    }
+
     fn get_vx(&mut self) -> u8 {
         self.registers[self.current_opcode.second_nibble as usize]
     }
@@ -236,7 +242,10 @@ impl Emulator {
     // Stores the least significant bit of VX in VF and then shifts
     // VX to the right by 1.
     // Vx >>= 1
-    fn _8XY6(&mut self) {}
+    fn _8XY6(&mut self) {
+        self.registers[15] = 00000001u8 & self.get_vx();
+        self.registers[self.current_opcode.second_nibble as usize] >>= 1;
+    }
 
     // Sets VX to VY minus VX. VF is set to 0 when there's a borrow,
     // and 1 when there is not.
@@ -246,20 +255,32 @@ impl Emulator {
     // Stores the most significant bit of VX in VF
     // and then shifts VX to the left by 1.
     // Vx <<= 1
-    fn _8XYE(&mut self) {}
+    fn _8XYE(&mut self) {
+        self.registers[15] = 00000001u8 & self.get_vx();
+        self.registers[self.current_opcode.second_nibble as usize] <<= 1;
+    }
 
     // Skips the next instruction if VX does not equal VY.
     // (Usually the next instruction is a jump to skip a code block)
     // if (Vx != Vy)
-    fn _9XY0(&mut self) {}
+    fn _9XY0(&mut self) {
+        if self.get_vx() != self.get_vy() {
+            self.skip_next_instruction();
+        }
+    }
 
     // Sets I to the address NNN.
     // I = NNN
-    fn ANNN(&mut self) {}
+    fn ANNN(&mut self) {
+        self.index_register = self.get_second_third_fourth_nibbles_inline();
+    }
 
     // Jumps to the address NNN plus V0.
     // PC = V0 + NNN
-    fn BNNN(&mut self) {}
+    fn BNNN(&mut self) {
+        self.program_counter =
+            self.registers[0] as u16 + self.get_second_third_fourth_nibbles_inline();
+    }
 
     // Sets VX to the result of a bitwise and operation on a random number
     // (Typically: 0 to 255) and NN. Vx = rand() & NN
@@ -347,7 +368,13 @@ impl Emulator {
     // address I. The offset from I is increased by 1 for each value written,
     // but I itself is left unmodified.
     // reg_load(Vx, &I)
-    fn FX65(&mut self) {}
+    fn FX65(&mut self) {
+        for register in 0..(self.current_opcode.second_nibble as usize) {
+            // the idea is here but it's surely wrong lol
+            self.memory[(self.index_register + register as u16) as usize] =
+                self.registers[register];
+        }
+    }
 
     fn cycle(&mut self) {
         let opcode = self.fetch_opcode();
