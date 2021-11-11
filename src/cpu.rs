@@ -167,7 +167,11 @@ impl Emulator {
 
     // Calls subroutine at NNN.
     // *(0xNNN)()
-    fn _2NNN(&mut self) {}
+    fn _2NNN(&mut self) {
+        self.stack[self.stack_pointer] = self.program_counter as usize;
+        self.stack_pointer += 1;
+        self.program_counter = self.get_second_third_fourth_nibbles_inline();
+    }
 
     // Skips the next instruction if VX equals NN.
     // (Usually the next instruction is a jump to skip a code block)
@@ -183,12 +187,20 @@ impl Emulator {
     // Skips the next instruction if VX does not equal NN.
     // (Usually the next instruction is a jump to skip a code block);
     // if (Vx != NN)
-    fn _4XNN(&mut self) {}
+    fn _4XNN(&mut self) {
+        if self.get_vx() != self.get_third_and_fourth_nibbles_inline() {
+            self.skip_next_instruction();
+        }
+    }
 
     // Skips the next instruction if VX equals VY.
     // (Usually the next instruction is a jump to skip a code block).
     // if (Vx == Vy)
-    fn _5XY0(&mut self) {}
+    fn _5XY0(&mut self) {
+        if self.get_vx() == self.get_vy() {
+            self.skip_next_instruction()
+        }
+    }
 
     // Sets VX to NN.
     // Vx = N
@@ -232,12 +244,26 @@ impl Emulator {
     // Adds VY to VX. VF is set to 1 when there's a carry,
     // and to 0 when there is not.
     // Vx += Vy
-    fn _8XY4(&mut self) {}
+    fn _8XY4(&mut self) {
+        let sum = (self.get_vx() + self.get_vy()) as u16;
+        if sum > 255 {
+            self.registers[15] = 1;
+        }
+        self.registers[self.current_opcode.second_nibble as usize] +=
+            self.registers[self.current_opcode.third_nibble as usize];
+    }
 
     // VY is subtracted from VX. VF is set to 0 when there's a borrow,
     // and 1 when there is not.
     // Vx -= Vy
-    fn _8XY5(&mut self) {}
+    fn _8XY5(&mut self) {
+        let substraction = (self.get_vx() - self.get_vy()) as i16;
+        if substraction < 0 {
+            self.registers[15] = 1;
+        }
+        self.registers[self.current_opcode.second_nibble as usize] -=
+            self.registers[self.current_opcode.third_nibble as usize];
+    }
 
     // Stores the least significant bit of VX in VF and then shifts
     // VX to the right by 1.
