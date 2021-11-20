@@ -1,4 +1,5 @@
 use js_sys::Math::random;
+use std::fmt;
 use wasm_bindgen::prelude::*;
 
 pub const FONTS: [u8; 80] = [
@@ -21,15 +22,33 @@ pub const FONTS: [u8; 80] = [
 ];
 
 pub struct OpCode {
-    first_nibble: u8,
-    second_nibble: u8,
-    third_nibble: u8,
-    fourth_nibble: u8,
+    pub first_nibble: u8,
+    pub second_nibble: u8,
+    pub third_nibble: u8,
+    pub fourth_nibble: u8,
+}
+
+impl fmt::Display for OpCode {
+    // This trait requires `fmt` with this exact signature.
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // Write strictly the first element into the supplied output
+        // stream: `f`. Returns `fmt::Result` which indicates whether the
+        // operation succeeded or failed. Note that `write!` uses syntax which
+        // is very similar to `println!`.
+        write!(
+            f,
+            "first nibble: {:1x}\n second nibble: {:1x}\n third_nibble: {:1x}\n fourth nibble: {:1x}",
+            self.first_nibble,
+            self.second_nibble,
+            self.third_nibble,
+            self.fourth_nibble
+        )
+    }
 }
 
 //write cpu struct with impls
 pub struct Emulator {
-    current_opcode: OpCode,
+    pub current_opcode: OpCode,
     memory: [u8; 4096],
 
     //regs
@@ -38,10 +57,10 @@ pub struct Emulator {
     program_counter: u16,
 
     //display
-    screen: [bool; 64 * 32],
+    pub screen: [bool; 64 * 32],
 
-    //stack related  padding-right: 960px;
-    stack: [usize; 16],
+    //stack related
+    pub stack: [u16; 16],
     stack_pointer: usize,
 
     //timers
@@ -163,12 +182,17 @@ impl Emulator {
 
     // Jumps to address NNN.
     // goto NNN.
-    fn _1NNN(&mut self) {}
+    fn _1NNN(&mut self) {
+        self.program_counter = (self.current_opcode.first_nibble as u16) << 12
+            & (self.current_opcode.second_nibble as u16) << 8
+            & (self.current_opcode.third_nibble as u16) << 4
+            & 0x0FFF;
+    }
 
     // Calls subroutine at NNN.
     // *(0xNNN)()
     fn _2NNN(&mut self) {
-        self.stack[self.stack_pointer] = self.program_counter as usize;
+        self.stack[self.stack_pointer] = self.program_counter as u16;
         self.stack_pointer += 1;
         self.program_counter = self.get_second_third_fourth_nibbles_inline();
     }
@@ -402,17 +426,19 @@ impl Emulator {
         }
     }
 
-    fn cycle(&mut self) {
+    pub fn cycle(&mut self) {
         let opcode = self.fetch_opcode();
+
+        self.process_opcode(opcode);
 
         self.update_timers();
     }
 
-    fn process_opcode(&mut self, opcode: u16) {
+    pub fn process_opcode(&mut self, opcode: u16) {
         // use nom to parse opcodes?
-        let first_nibble = (opcode & 0xF000 >> 12) as u8;
-        let second_nibble = (opcode & 0x0F00 >> 8) as u8;
-        let third_nibble = (opcode & 0x00F0 >> 4) as u8;
+        let first_nibble = ((opcode & 0xF000) >> 12) as u8;
+        let second_nibble = ((opcode & 0x0F00) >> 8) as u8;
+        let third_nibble = ((opcode & 0x00F0) >> 4) as u8;
         let fourth_nibble = (opcode & 0x000F) as u8;
 
         self.current_opcode = OpCode {
@@ -421,6 +447,8 @@ impl Emulator {
             third_nibble,
             fourth_nibble,
         };
+
+        self.program_counter += 2;
 
         match (first_nibble, second_nibble, third_nibble, fourth_nibble) {
             (0, 0, 0xE, 0xE) => self._00EE(),
@@ -459,9 +487,51 @@ impl Emulator {
             (0xF, _, 5, 5) => self.FX55(),
             (0xF, _, 6, 5) => self.FX65(),
             _ => {
-                println!("Unknown opcode, instructions unclear, got stuck in the washing machine.")
+                self._00E0()
+                //println!("Unknown opcode, instructions unclear, got stuck in the washing machine.")
             }
         }
+    }
+}
+
+// Display trait to print Emulator state next to the screen
+impl fmt::Display for Emulator {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "current opcode: {:1X}{:1X}{:1X}{:1X}<br>",
+            self.current_opcode.first_nibble,
+            self.current_opcode.second_nibble,
+            self.current_opcode.third_nibble,
+            self.current_opcode.fourth_nibble
+        );
+
+        write!(
+            f,
+            "registers: {}<br>",
+            self.registers
+                .iter()
+                .map(|&x| format!("{:1X},", x & 0x000F))
+                .collect::<String>()
+        );
+
+        write!(f, "index register: {}<br>", self.index_register);
+        write!(f, "program counter: {}<br>", self.program_counter);
+        write!(
+            f,
+            "delay timer: {}<br> sound timer: {}<br>",
+            self.delay_timer, self.sound_timer
+        );
+
+        write!(f, "stack pointer: {}<br>", self.stack_pointer);
+        write!(
+            f,
+            "stack: {}",
+            self.stack
+                .iter()
+                .map(|&x| format!("{},", x))
+                .collect::<String>()
+        )
     }
 }
 
