@@ -1,8 +1,5 @@
 html {
   background: WhiteSmoke;
-  /*background-image:url("background.png");
-	background-repeat: no-repeat;
-	background-size: cover;*/
 }
 body {
   height: 100%;
@@ -112,4 +109,9 @@ input[type="file"] {
 .key:hover {
   border: 1px solid #eeeeee;
   background-color: rgb(243, 243, 243);
+}
+
+.emulator_state {
+  float: right;
+  text-align: justify;
 }
