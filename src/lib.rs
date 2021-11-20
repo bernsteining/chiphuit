@@ -1,12 +1,10 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
-use wasm_bindgen::Clamped;
-use wasm_bindgen::JsCast;
+use wasm_bindgen::{Clamped, JsCast};
 use web_sys::{CanvasRenderingContext2d, ImageData};
 
 use js_sys::Math::random;
-
 mod cpu;
 mod graphics;
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
@@ -18,6 +16,12 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 #[wasm_bindgen(start)]
 pub fn main() -> Result<(), JsValue> {
     let context = graphics::get_context();
+    let document = web_sys::window().unwrap().document().unwrap();
+    let emulator_state = document
+        .create_element("emulator_state")
+        .expect("should have the emulator state element");
+
+    emulator_state.set_class_name("emulator_state");
 
     let f = Rc::new(RefCell::new(None));
     let g = f.clone();
@@ -33,7 +37,6 @@ pub fn main() -> Result<(), JsValue> {
     let w2 = graphics::window();
 
     // HARDCODE GAME ATM
-
     let break_out = b"129ffcfc80a202ddc100eea204dba100eea2036002610587008610d67171086f388f174f00121770026f108f074f00121500ee22057d04220500ee22057dfc220500ee8080400168ff40ff68015ac0225300ee80b070fb61f880127005a203d0a100ee220b8b948a84220b4b0069014b3f69ff4a0068014a1f68ff4f0122434a1f228500ee00e06b1e6a142205220b221100eefe073e0012936e04fe1500ee6d1e6c1e6b406a1dc901490069ff68ff2205220b22116007e0a1223b6009e0a122332263229312b5".to_vec();
 
     // INIT EMULATOR
@@ -51,6 +54,7 @@ pub fn main() -> Result<(), JsValue> {
 
         // handle input here
         // compute cpu cycle
+        emulator.cycle();
 
         // random black and white screen
         let mut screen = [false; 64 * 32];
@@ -60,8 +64,16 @@ pub fn main() -> Result<(), JsValue> {
                 _ => true,
             }
         }
+        emulator.screen = screen;
 
-        draw_screen(&context, screen);
+        emulator_state.set_inner_html(&emulator.to_string());
+        document
+            .body()
+            .expect("document should have a body")
+            .append_child(&emulator_state)
+            .unwrap();
+
+        draw_screen(&context, emulator.screen);
     }) as Box<dyn FnMut()>));
 
     graphics::request_animation_frame(&graphics::window(), g.borrow().as_ref().unwrap());
