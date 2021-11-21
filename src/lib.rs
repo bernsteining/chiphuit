@@ -3,7 +3,15 @@ use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
-use js_sys::Math::random;
+use std::num::ParseIntError;
+
+pub fn decode_hex(s: &str) -> Result<Vec<u8>, ParseIntError> {
+    (0..s.len())
+        .step_by(2)
+        .map(|i| u8::from_str_radix(&s[i..i + 2], 16))
+        .collect()
+}
+
 mod cpu;
 mod graphics;
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
@@ -36,7 +44,10 @@ pub fn main() -> Result<(), JsValue> {
     let w2 = graphics::window();
 
     // HARDCODE GAME ATM
-    let break_out = b"129ffcfc80a202ddc100eea204dba100eea2036002610587008610d67171086f388f174f00121770026f108f074f00121500ee22057d04220500ee22057dfc220500ee8080400168ff40ff68015ac0225300ee80b070fb61f880127005a203d0a100ee220b8b948a84220b4b0069014b3f69ff4a0068014a1f68ff4f0122434a1f228500ee00e06b1e6a142205220b221100eefe073e0012936e04fe1500ee6d1e6c1e6b406a1dc901490069ff68ff2205220b22116007e0a1223b6009e0a122332263229312b5".to_vec();
+    let rom_test = decode_hex(
+        "124eeaacaaeaceaaaaaee0a0a0e0c04040e0e020c0e0e06020e0a0e0202060402040e080e0e0e0202020e0e0a0e0e0e020e040a0e0a0e0c080e0e080c080a040a0a0a202dab400eea202dab413dc680169056a0a6b01652a662ba216d8b4a23ed9b4a202362ba206dab46b06a21ad8b4a23ed9b4a206452aa202dab46b0ba21ed8b4a23ed9b4a2065560a202dab46b10a226d8b4a23ed9b4a20676ff462aa202dab46b15a22ed8b4a23ed9b4a2069560a202dab46b1aa232d8b4a23ed9b422426817691b6a206b01a20ad8b4a236d9b4a202dab46b06a22ad8b4a20ad9b4a2068750472aa202dab46b0ba22ad8b4a20ed9b4a206672a87b1472ba202dab46b10a22ad8b4a212d9b4a2066678671f87624718a202dab46b15a22ad8b4a216d9b4a2066678671f87634767a202dab46b1aa22ad8b4a21ad9b4a206668c678c87644718a202dab4682c69306a346b01a22ad8b4a21ed9b4a206668c6778876547eca202dab46b06a22ad8b4a222d9b4a20666e0866e46c0a202dab46b0ba22ad8b4a236d9b4a206660f86664607a202dab46b10a23ad8b4a21ed9b4a3e860006130f155a3e9f065a2064030a202dab46b15a23ad8b4a216d9b4a3e86689f633f265a2023001a2063103a2063207a206dab46b1aa20ed8b4a23ed9b4124813dc",
+    )
+    .unwrap();
 
     // INIT EMULATOR
     let mut emulator = cpu::Emulator::new();
@@ -45,7 +56,7 @@ pub fn main() -> Result<(), JsValue> {
     emulator.load_font();
 
     // LOAD GAME
-    emulator.load_game(break_out);
+    emulator.load_game(rom_test);
 
     // EVENT LOOP
     *g.borrow_mut() = Some(Closure::wrap(Box::new(move || {
@@ -54,16 +65,6 @@ pub fn main() -> Result<(), JsValue> {
         // handle input here
         // compute cpu cycle
         emulator.cycle();
-
-        // random black and white screen
-        let mut screen = [false; 64 * 32];
-        for i in 0..64 * 32 {
-            screen[i] = match random() {
-                0.0..=0.5 => false,
-                _ => true,
-            }
-        }
-        emulator.screen = screen;
 
         emulator_state.set_inner_html(&emulator.to_string());
         document
