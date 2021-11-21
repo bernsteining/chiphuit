@@ -92,6 +92,17 @@ impl Emulator {
 
     pub fn load_game(&mut self, game: Vec<u8>) {
         self.memory[512..512 + game.len()].copy_from_slice(&game);
+
+        console::log_1(
+            &format!(
+                "Loaded game, memory state: {}<br>",
+                self.memory[512..512 + game.len()]
+                    .iter()
+                    .map(|&x| format!("{:X?},", x))
+                    .collect::<String>(),
+            )
+            .into(),
+        );
     }
 
     fn update_timers(&mut self) {
@@ -216,7 +227,7 @@ impl Emulator {
     }
 
     // Adds NN to VX. (Carry flag is not changed);
-    // Vx += N
+    // Vx += NN
     fn _7XNN(&mut self) {
         self.registers[self.current_opcode.second_nibble as usize] +=
             self.get_third_and_fourth_nibbles_inline();
@@ -567,6 +578,15 @@ impl fmt::Display for Emulator {
             "delay timer: {}<br> sound timer: {}<br>",
             self.delay_timer, self.sound_timer
         );
+
+        // write!(
+        //     f,
+        //     "memory: {}<br>",
+        //     self.memory
+        //         .iter()
+        //         .map(|&x| format!("{:X},", x))
+        //         .collect::<String>()
+        // );
 
         write!(f, "stack pointer: {}<br>", self.stack_pointer);
         write!(
