@@ -28,24 +28,6 @@ pub struct OpCode {
     pub fourth_nibble: u8,
 }
 
-impl fmt::Display for OpCode {
-    // This trait requires `fmt` with this exact signature.
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        // Write strictly the first element into the supplied output
-        // stream: `f`. Returns `fmt::Result` which indicates whether the
-        // operation succeeded or failed. Note that `write!` uses syntax which
-        // is very similar to `println!`.
-        write!(
-            f,
-            "first nibble: {:1x}\n second nibble: {:1x}\n third_nibble: {:1x}\n fourth nibble: {:1x}",
-            self.first_nibble,
-            self.second_nibble,
-            self.third_nibble,
-            self.fourth_nibble
-        )
-    }
-}
-
 //write cpu struct with impls
 pub struct Emulator {
     pub current_opcode: OpCode,
@@ -126,7 +108,7 @@ impl Emulator {
         }
     }
 
-    fn update_key_press(&mut self, key: String) {
+    pub fn update_key_press(&mut self, key: String) {
         match key.as_str() {
             "A" => self.keypad[10] = true,
             "B" => self.keypad[11] = true,
@@ -144,7 +126,6 @@ impl Emulator {
     }
 
     // utils for factorization / readability
-
     fn get_third_and_fourth_nibbles_inline(&mut self) -> u8 {
         return self.current_opcode.third_nibble << 4 | self.current_opcode.fourth_nibble;
     }
@@ -164,7 +145,6 @@ impl Emulator {
     }
 
     // fn get_three_last_nibbles(&mut self) -> u16 {}
-
     fn skip_next_instruction(&mut self) {}
 
     // Calls machine code routine (RCA 1802 for COSMAC VIP) at
@@ -281,7 +261,7 @@ impl Emulator {
     // and 1 when there is not.
     // Vx -= Vy
     fn _8XY5(&mut self) {
-        let substraction = (self.get_vx() - self.get_vy()) as i16;
+        let substraction = (self.get_vx() - self.get_vy()) as i8;
         if substraction < 0 {
             self.registers[15] = 1;
         }
@@ -300,7 +280,16 @@ impl Emulator {
     // Sets VX to VY minus VX. VF is set to 0 when there's a borrow,
     // and 1 when there is not.
     // Vx = Vy - Vx
-    fn _8XY7(&mut self) {}
+    fn _8XY7(&mut self) {
+        let substraction = (self.get_vy() - self.get_vx()) as i8;
+        if substraction < 0 {
+            self.registers[15] = 1;
+            self.registers[self.current_opcode.second_nibble as usize] = -substraction as u8;
+        } else {
+            self.registers[15] = 0;
+            self.registers[self.current_opcode.second_nibble as usize] = substraction as u8;
+        }
+    }
 
     // Stores the most significant bit of VX in VF
     // and then shifts VX to the left by 1.
@@ -348,6 +337,30 @@ impl Emulator {
     // draw(Vx, Vy, N)
     fn DXYN(&mut self) {
         let height = self.current_opcode.fourth_nibble;
+        let x = self.get_vx();
+        let y = self.get_vy();
+        for row in 0..height - 1 {
+            let row_pixels: [bool; 8] =
+                u8_to_bools(self.memory[(self.index_register as usize) + row as usize]);
+
+            let mut collision = false;
+
+            for i in 0..7 {
+                let previous_state = self.screen[(64 * x + 32 * y + i) as usize];
+                self.screen[(64 * x + 32 * y + i) as usize] ^= row_pixels[i as usize];
+                if collision != false
+                    && previous_state == true
+                    && self.screen[(64 * x + 32 * y + i) as usize] == false
+                {
+                    collision = true;
+                }
+            }
+
+            match collision {
+                true => self.registers[15] = 1,
+                false => self.registers[15] = 0,
+            }
+        }
     }
 
     // Skips the next instruction if the key stored in VX is pressed.
@@ -393,7 +406,7 @@ impl Emulator {
     // Characters 0-F (in hexadecimal) are represented by a 4x5 font.
     // I = sprite_addr[Vx]
     fn FX29(&mut self) {
-        // self.index_register = FONTS[self.get_vx() as usize] as u16
+        self.index_register = FONTS[self.get_vx() as usize] as u16
     }
 
     // Stores the binary-coded decimal representation of VX, with the most
@@ -412,7 +425,12 @@ impl Emulator {
     // The offset from I is increased by 1 for each value written, but I
     // itself is left unmodified
     // reg_dump(Vx, &I)
-    fn FX55(&mut self) {}
+    fn FX55(&mut self) {
+        let x = self.get_vx();
+        for i in 0..x {
+            self.memory[(self.index_register + i as u16) as usize] = self.registers[i as usize];
+        }
+    }
 
     // Fills from V0 to VX (including VX) with values from memory, starting at
     // address I. The offset from I is increased by 1 for each value written,
@@ -543,4 +561,23 @@ pub fn handle_input(key: String) {
     // body().append_child(&keys).unwrap();
 
     //let text = format!("Keypress: {}", key);
+}
+
+// returns an array of booleans according to a byte's bits
+fn u8_to_bools(byte: u8) -> [bool; 8] {
+    let masks = [
+        0b00000001, 0b00000010, 0b00000100, 0b00001000, 0b00010000, 0b00100000, 0b01000000,
+        0b10000000,
+    ];
+
+    let mut booleans: [bool; 8] = [true; 8];
+
+    for (i, mask) in masks.iter().enumerate() {
+        match byte & mask {
+            mask => booleans[i] = true,
+            _ => booleans[i] = false,
+        }
+    }
+
+    return booleans;
 }
