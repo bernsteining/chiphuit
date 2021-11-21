@@ -1,6 +1,7 @@
 use js_sys::Math::random;
 use std::fmt;
 use wasm_bindgen::prelude::*;
+use web_sys::console;
 
 pub const FONTS: [u8; 80] = [
     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -67,7 +68,7 @@ impl Emulator {
             //regs
             registers: [0; 16],
             index_register: 0,
-            program_counter: 0,
+            program_counter: 512,
 
             //display
             screen: [false; 64 * 32],
@@ -131,9 +132,10 @@ impl Emulator {
     }
 
     fn get_second_third_fourth_nibbles_inline(&mut self) -> u16 {
-        (self.current_opcode.second_nibble as u16) << 8
+        ((self.current_opcode.second_nibble as u16) << 8
             | (self.current_opcode.third_nibble as u16) << 4
-            | self.current_opcode.fourth_nibble as u16
+            | self.current_opcode.fourth_nibble as u16)
+            & 0x0FFF
     }
 
     fn get_vx(&mut self) -> u8 {
@@ -145,7 +147,9 @@ impl Emulator {
     }
 
     // fn get_three_last_nibbles(&mut self) -> u16 {}
-    fn skip_next_instruction(&mut self) {}
+    fn skip_next_instruction(&mut self) {
+        self.program_counter += 2;
+    }
 
     // Calls machine code routine (RCA 1802 for COSMAC VIP) at
     // address NNN. Not necessary for most ROMs.
@@ -158,21 +162,21 @@ impl Emulator {
 
     // Returns from a subroutine.
     // return;
-    fn _00EE(&mut self) {}
+    fn _00EE(&mut self) {
+        self.stack_pointer -= 1;
+        self.program_counter = self.stack[self.stack_pointer];
+    }
 
     // Jumps to address NNN.
     // goto NNN.
     fn _1NNN(&mut self) {
-        self.program_counter = (self.current_opcode.first_nibble as u16) << 12
-            & (self.current_opcode.second_nibble as u16) << 8
-            & (self.current_opcode.third_nibble as u16) << 4
-            & 0x0FFF;
+        self.program_counter = self.get_second_third_fourth_nibbles_inline();
     }
 
     // Calls subroutine at NNN.
     // *(0xNNN)()
     fn _2NNN(&mut self) {
-        self.stack[self.stack_pointer] = self.program_counter as u16;
+        self.stack[self.stack_pointer] = self.program_counter;
         self.stack_pointer += 1;
         self.program_counter = self.get_second_third_fourth_nibbles_inline();
     }
@@ -181,9 +185,7 @@ impl Emulator {
     // (Usually the next instruction is a jump to skip a code block)
     // if (Vx == NN)
     fn _3XNN(&mut self) {
-        if self.registers[self.current_opcode.second_nibble as usize]
-            == self.get_third_and_fourth_nibbles_inline()
-        {
+        if self.get_vx() == self.get_third_and_fourth_nibbles_inline() {
             self.skip_next_instruction();
         }
     }
@@ -202,7 +204,7 @@ impl Emulator {
     // if (Vx == Vy)
     fn _5XY0(&mut self) {
         if self.get_vx() == self.get_vy() {
-            self.skip_next_instruction()
+            self.skip_next_instruction();
         }
     }
 
@@ -223,26 +225,25 @@ impl Emulator {
     // Sets VX to the value of VY.
     // Vx = Vy
     fn _8XY0(&mut self) {
-        self.registers[self.current_opcode.second_nibble as usize] =
-            self.current_opcode.third_nibble;
+        self.registers[self.current_opcode.second_nibble as usize] = self.get_vy();
     }
 
     // Sets VX to VX or VY. (Bitwise OR operation).
     // Vx |= Vy
     fn _8XY1(&mut self) {
-        self.registers[self.current_opcode.second_nibble as usize] |= self.get_vy()
+        self.registers[self.current_opcode.second_nibble as usize] |= self.get_vy();
     }
 
     // Sets VX to VX and VY. (Bitwise AND operation).
     // Vx &= Vy
     fn _8XY2(&mut self) {
-        self.registers[self.current_opcode.second_nibble as usize] &= self.get_vy()
+        self.registers[self.current_opcode.second_nibble as usize] &= self.get_vy();
     }
 
     // Sets VX to VX xor VY.
     // Vx ^= Vy
     fn _8XY3(&mut self) {
-        self.registers[self.current_opcode.second_nibble as usize] ^= self.get_vy()
+        self.registers[self.current_opcode.second_nibble as usize] ^= self.get_vy();
     }
 
     // Adds VY to VX. VF is set to 1 when there's a carry,
@@ -253,8 +254,7 @@ impl Emulator {
         if sum > 255 {
             self.registers[15] = 1;
         }
-        self.registers[self.current_opcode.second_nibble as usize] +=
-            self.registers[self.current_opcode.third_nibble as usize];
+        self.registers[self.current_opcode.second_nibble as usize] += self.get_vy();
     }
 
     // VY is subtracted from VX. VF is set to 0 when there's a borrow,
@@ -263,10 +263,11 @@ impl Emulator {
     fn _8XY5(&mut self) {
         let substraction = (self.get_vx() - self.get_vy()) as i8;
         if substraction < 0 {
+            self.registers[15] = 0;
+        } else {
             self.registers[15] = 1;
         }
-        self.registers[self.current_opcode.second_nibble as usize] -=
-            self.registers[self.current_opcode.third_nibble as usize];
+        self.registers[self.current_opcode.second_nibble as usize] = substraction as u8;
     }
 
     // Stores the least significant bit of VX in VF and then shifts
@@ -283,10 +284,10 @@ impl Emulator {
     fn _8XY7(&mut self) {
         let substraction = (self.get_vy() - self.get_vx()) as i8;
         if substraction < 0 {
-            self.registers[15] = 1;
-            self.registers[self.current_opcode.second_nibble as usize] = -substraction as u8;
-        } else {
             self.registers[15] = 0;
+            self.registers[self.current_opcode.second_nibble as usize] = substraction as u8;
+        } else {
+            self.registers[15] = 1;
             self.registers[self.current_opcode.second_nibble as usize] = substraction as u8;
         }
     }
@@ -295,7 +296,7 @@ impl Emulator {
     // and then shifts VX to the left by 1.
     // Vx <<= 1
     fn _8XYE(&mut self) {
-        self.registers[15] = 00000001u8 & self.get_vx();
+        self.registers[15] = 128 & self.get_vx();
         self.registers[self.current_opcode.second_nibble as usize] <<= 1;
     }
 
@@ -325,7 +326,7 @@ impl Emulator {
     // (Typically: 0 to 255) and NN. Vx = rand() & NN
     fn CXNN(&mut self) {
         self.registers[self.current_opcode.second_nibble as usize] =
-            ((random() * 255.0) as u8) & self.get_third_and_fourth_nibbles_inline()
+            ((random() * 255.0) as u8) & self.get_third_and_fourth_nibbles_inline();
     }
 
     // Draws a sprite at coordinate (VX, VY) that has a width of 8 pixels and
@@ -366,47 +367,61 @@ impl Emulator {
     // Skips the next instruction if the key stored in VX is pressed.
     // (Usually the next instruction is a jump to skip a code block);
     // if (key() == Vx)
-    fn EX9E(&mut self) {}
+    fn EX9E(&mut self) {
+        if self.keypad[self.get_vx() as usize] {
+            self.skip_next_instruction();
+        }
+    }
 
     // Skips the next instruction if the key stored in VX is not pressed.
     // (Usually the next instruction is a jump to skip a code block).
     // if (key() != Vx)
-    fn EXA1(&mut self) {}
+    fn EXA1(&mut self) {
+        if !self.keypad[self.get_vx() as usize] {
+            self.skip_next_instruction();
+        }
+    }
 
     // Sets VX to the value of the delay timer.
     // Vx = get_delay()
     fn FX07(&mut self) {
-        self.registers[self.current_opcode.second_nibble as usize] = self.delay_timer
+        self.registers[self.current_opcode.second_nibble as usize] = self.delay_timer;
     }
 
     // A key press is awaited, and then stored in VX. (Blocking Operation.
     // All instruction halted until next key event);
     // Vx = get_key()
-    fn FX0A(&mut self) {}
+    fn FX0A(&mut self) {
+        // self.program_counter -= 2;
+        // if self.keypad[self.get_vx() as usize] == true {
+        //     self.registers[self.current.second_nibble as usize] =  ;
+        //     self.program_counter +=2;
+        // }
+    }
 
     // Sets the delay timer to VX.
     // delay_timer(Vx)
     fn FX15(&mut self) {
-        self.delay_timer = self.get_vx()
+        self.delay_timer = self.get_vx();
     }
 
     // Sets the sound timer to VX.
     // sound_timer(Vx)
     fn FX18(&mut self) {
-        self.sound_timer = self.get_vx()
+        self.sound_timer = self.get_vx();
     }
 
     // Adds VX to I. VF is not affected.
     // I += Vx
     fn FX1E(&mut self) {
-        self.index_register += self.get_vx() as u16
+        self.index_register += self.get_vx() as u16;
     }
 
     // Sets I to the location of the sprite for the character in VX.
     // Characters 0-F (in hexadecimal) are represented by a 4x5 font.
     // I = sprite_addr[Vx]
     fn FX29(&mut self) {
-        self.index_register = FONTS[self.get_vx() as usize] as u16
+        self.index_register = self.get_vx() as u16 * 5;
     }
 
     // Stores the binary-coded decimal representation of VX, with the most
@@ -419,15 +434,18 @@ impl Emulator {
     // *(I+0) = BCD(3);
     // *(I+1) = BCD(2);
     // *(I+2) = BCD(1);
-    fn FX33(&mut self) {}
+    fn FX33(&mut self) {
+        self.memory[self.index_register as usize] = self.get_vx() / 100;
+        self.memory[self.index_register as usize + 1] = (self.get_vx() / 10) % 10;
+        self.memory[self.index_register as usize + 2] = (self.get_vx() % 100) % 10;
+    }
 
     // Stores from V0 to VX (including VX) in memory, starting at address I.
     // The offset from I is increased by 1 for each value written, but I
     // itself is left unmodified
     // reg_dump(Vx, &I)
     fn FX55(&mut self) {
-        let x = self.get_vx();
-        for i in 0..x {
+        for i in 0..self.get_vx() + 1 {
             self.memory[(self.index_register + i as u16) as usize] = self.registers[i as usize];
         }
     }
@@ -505,8 +523,17 @@ impl Emulator {
             (0xF, _, 5, 5) => self.FX55(),
             (0xF, _, 6, 5) => self.FX65(),
             _ => {
-                self._00E0()
-                //println!("Unknown opcode, instructions unclear, got stuck in the washing machine.")
+                self.screen = [true; 2048];
+                console::log_1(
+                    &format!(
+                        "Unknown opcode: {:X}{:X}{:X}{:X}, instructions unclear, got stuck in the washing machine.",
+                        self.current_opcode.first_nibble,
+                        self.current_opcode.second_nibble,
+                        self.current_opcode.third_nibble,
+                        self.current_opcode.fourth_nibble
+                    )
+                    .into(),
+                );
             }
         }
     }
@@ -517,7 +544,7 @@ impl fmt::Display for Emulator {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "current opcode: {:1X}{:1X}{:1X}{:1X}<br>",
+            "current opcode: {:X}{:X}{:X}{:X}<br>",
             self.current_opcode.first_nibble,
             self.current_opcode.second_nibble,
             self.current_opcode.third_nibble,
@@ -529,7 +556,7 @@ impl fmt::Display for Emulator {
             "registers: {}<br>",
             self.registers
                 .iter()
-                .map(|&x| format!("{:1X},", x & 0x000F))
+                .map(|&x| format!("{:3X},", x))
                 .collect::<String>()
         );
 
