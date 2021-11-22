@@ -1,6 +1,7 @@
 use js_sys::Math::random;
 use std::fmt;
 use wasm_bindgen::prelude::*;
+
 use web_sys::console;
 
 pub const FONTS: [u8; 80] = [
@@ -542,7 +543,12 @@ impl fmt::Display for Emulator {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "current opcode: {:X}{:X}{:X}{:X}<br>",
+            r#"<table style="border-spacing: 30px 5px;"><tr><th>variable</th><th>value</th></tr>"#,
+        );
+
+        write!(
+            f,
+            "<tr><td>current opcode</td><td>{:X}{:X}{:X}{:X}</td></tr>",
             self.current_opcode.first_nibble,
             self.current_opcode.second_nibble,
             self.current_opcode.third_nibble,
@@ -551,41 +557,50 @@ impl fmt::Display for Emulator {
 
         write!(
             f,
-            "registers: {}<br>",
+            "<tr><td>registers</td><td>{}</td></tr>",
             self.registers
                 .iter()
                 .map(|&x| format!("{:3X},", x))
                 .collect::<String>()
         );
 
-        write!(f, "index register: {}<br>", self.index_register);
-        write!(f, "program counter: {}<br>", self.program_counter);
         write!(
             f,
-            "delay timer: {}<br> sound timer: {}<br>",
-            self.delay_timer, self.sound_timer
+            "<tr><td>index register</td> <td>{}</td></tr>",
+            self.index_register
+        );
+        write!(
+            f,
+            "<tr><td>program counter</td> <td>{}</td></tr>",
+            self.program_counter
+        );
+        write!(
+            f,
+            "<tr><td>delay timer</td> <td>{}</td> </tr>",
+            self.delay_timer
         );
 
-        write!(f, "stack pointer: {}<br>", self.stack_pointer);
         write!(
             f,
-            "stack: {}",
+            "<tr><td>sound timer</td> <td>{}</td></tr>",
+            self.sound_timer
+        );
+
+        write!(
+            f,
+            "<tr><td>stack pointer</td> <td>{}</td></tr>",
+            self.stack_pointer
+        );
+        write!(
+            f,
+            "<tr><td>stack</td> <td>{}<td></tr>",
             self.stack
                 .iter()
                 .map(|&x| format!("{},", x))
                 .collect::<String>()
-        )
+        );
+        write!(f, "</table>",)
     }
-}
-
-#[wasm_bindgen]
-pub fn handle_input(key: String) {
-    // logging on webpage
-    // let keys = document().create_element("lol").unwrap();
-    // keys.set_inner_html(&format!("<li>{}<li>", &key).to_string());
-    // body().append_child(&keys).unwrap();
-
-    //let text = format!("Keypress: {}", key);
 }
 
 // returns an array of booleans according to a byte's bits

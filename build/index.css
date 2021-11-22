@@ -112,6 +112,9 @@ input[type="file"] {
 }
 
 .emulator_state {
-  float: right;
   text-align: justify;
+  max-width: min-content;
+  position: fixed;
+  top: 0;
+  right: 0;
 }

@@ -2,8 +2,8 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
+use web_sys::console;
 
-use js_sys::Math::random;
 use std::num::ParseIntError;
 
 pub fn decode_hex(s: &str) -> Result<Vec<u8>, ParseIntError> {
@@ -26,10 +26,8 @@ pub fn main() -> Result<(), JsValue> {
     let context = graphics::get_context();
     let document = web_sys::window().unwrap().document().unwrap();
     let emulator_state = document
-        .create_element("emulator_state")
+        .get_element_by_id("emulator_state")
         .expect("should have the emulator state element");
-
-    emulator_state.set_class_name("emulator_state");
 
     let f = Rc::new(RefCell::new(None));
     let g = f.clone();
@@ -50,21 +48,17 @@ pub fn main() -> Result<(), JsValue> {
     )
     .unwrap();
 
-    // INIT EMULATOR
     let mut emulator = cpu::Emulator::new();
 
-    // LOAD FONT
     emulator.load_font();
-
-    // LOAD GAME
     emulator.load_game(rom_test);
 
     // EVENT LOOP
     *g.borrow_mut() = Some(Closure::wrap(Box::new(move || {
         set_timeout(&w2, t1.borrow().as_ref().unwrap(), 1);
 
-        // handle input here
-        // compute cpu cycle
+        emulator.update_key_press(handle_input("A".to_owned()));
+
         emulator.cycle();
 
         emulator_state.set_inner_html(&emulator.to_string());
@@ -89,4 +83,10 @@ fn set_timeout(window: &web_sys::Window, f: &Closure<dyn FnMut()>, timeout_ms: i
             timeout_ms,
         )
         .expect("should register `setTimeout` OK")
+}
+
+#[wasm_bindgen]
+pub fn handle_input(key: String) -> String {
+    console::log_1(&format!("Key pressed: {:}.", key).into());
+    key
 }

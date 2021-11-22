@@ -7,8 +7,5 @@ https://en.wikipedia.org/wiki/CHIP-8
 
 TODO:
 
+- Get rid of hardcoded ROM and allow user to select one
 - Handle inputs
-- Parse opcodes & ensure their correctness
-- stack handle etc
-- put emulator state next to the screen w/ css
-- use nom to parse bits instead of galering avec les u8
