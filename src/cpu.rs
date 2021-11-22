@@ -1,6 +1,5 @@
 use js_sys::Math::random;
 use std::fmt;
-use wasm_bindgen::prelude::*;
 
 use web_sys::console;
 
