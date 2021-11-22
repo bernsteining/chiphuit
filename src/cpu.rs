@@ -92,17 +92,6 @@ impl Emulator {
 
     pub fn load_game(&mut self, game: Vec<u8>) {
         self.memory[512..512 + game.len()].copy_from_slice(&game);
-
-        console::log_1(
-            &format!(
-                "Loaded game, memory state: {}<br>",
-                self.memory[512..512 + game.len()]
-                    .iter()
-                    .map(|&x| format!("{:X?},", x))
-                    .collect::<String>(),
-            )
-            .into(),
-        );
     }
 
     fn update_timers(&mut self) {
@@ -448,7 +437,7 @@ impl Emulator {
     fn FX33(&mut self) {
         self.memory[self.index_register as usize] = self.get_vx() / 100;
         self.memory[self.index_register as usize + 1] = (self.get_vx() / 10) % 10;
-        self.memory[self.index_register as usize + 2] = (self.get_vx() % 100) % 10;
+        self.memory[self.index_register as usize + 2] = self.get_vx() % 10;
     }
 
     // Stores from V0 to VX (including VX) in memory, starting at address I.
@@ -456,7 +445,7 @@ impl Emulator {
     // itself is left unmodified
     // reg_dump(Vx, &I)
     fn FX55(&mut self) {
-        for i in 0..self.get_vx() + 1 {
+        for i in 0..self.current_opcode.second_nibble + 1 {
             self.memory[(self.index_register + i as u16) as usize] = self.registers[i as usize];
         }
     }
@@ -466,10 +455,8 @@ impl Emulator {
     // but I itself is left unmodified.
     // reg_load(Vx, &I)
     fn FX65(&mut self) {
-        for register in 0..(self.current_opcode.second_nibble as usize) {
-            // the idea is here but it's surely wrong lol
-            self.memory[(self.index_register + register as u16) as usize] =
-                self.registers[register];
+        for i in 0..self.current_opcode.second_nibble + 1 {
+            self.registers[i as usize] = self.memory[(self.index_register + i as u16) as usize];
         }
     }
 
