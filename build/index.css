@@ -27,8 +27,9 @@ canvas {
   border-radius: 8%;
   display: block;
   position: float;
-  width: 100px;
+  width: 105px;
   text-align: center;
+  margin-top: -60px;
 
   -webkit-transition-duration: 0.4s; /* Safari */
   transition-duration: 0.4s;
