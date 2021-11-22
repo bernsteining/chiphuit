@@ -357,7 +357,7 @@ impl Emulator {
             let row_pixels: [bool; 8] =
                 u8_to_bools(self.memory[(self.index_register as usize) + row as usize]);
 
-            for i in 0..7 {
+            for i in 0..8 {
                 let index = (x as u16 + i as u16 + (y as u16 + row as u16) * 64) as usize;
 
                 let previous_state = self.screen[index];
@@ -603,20 +603,14 @@ pub fn handle_input(key: String) {
 
 // returns an array of booleans according to a byte's bits
 fn u8_to_bools(byte: u8) -> [bool; 8] {
-    let masks = [
-        0b00000001, 0b00000010, 0b00000100, 0b00001000, 0b00010000, 0b00100000, 0b01000000,
-        0b10000000,
-    ];
-
-    let mut booleans: [bool; 8] = [true; 8];
-
-    for (i, mask) in masks.iter().enumerate() {
-        if byte & mask == *mask {
-            booleans[i] = true;
-        } else {
-            booleans[i] = false;
-        }
-    }
-
-    return booleans;
+    [
+        0b10000000 & byte == 0b10000000,
+        0b01000000 & byte == 0b01000000,
+        0b00100000 & byte == 0b00100000,
+        0b00010000 & byte == 0b00010000,
+        0b00001000 & byte == 0b00001000,
+        0b00000100 & byte == 0b00000100,
+        0b00000010 & byte == 0b00000010,
+        0b00000001 & byte == 0b00000001,
+    ]
 }
