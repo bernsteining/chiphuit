@@ -351,27 +351,27 @@ impl Emulator {
         let height = self.current_opcode.fourth_nibble;
         let x = self.get_vx();
         let y = self.get_vy();
-        for row in 0..height - 1 {
+        let mut collision = false;
+
+        for row in 0..height {
             let row_pixels: [bool; 8] =
                 u8_to_bools(self.memory[(self.index_register as usize) + row as usize]);
 
-            let mut collision = false;
-
             for i in 0..7 {
-                let previous_state = self.screen[(64 * x + 32 * y + i) as usize];
-                self.screen[(64 * x + 32 * y + i) as usize] ^= row_pixels[i as usize];
-                if collision != false
-                    && previous_state == true
-                    && self.screen[(64 * x + 32 * y + i) as usize] == false
-                {
+                let index = (x as u16 + i as u16 + (y as u16 + row as u16) * 64) as usize;
+
+                let previous_state = self.screen[index];
+                self.screen[index] ^= row_pixels[i as usize];
+
+                if previous_state == true && self.screen[index] == false {
                     collision = true;
                 }
             }
-
-            match collision {
-                true => self.registers[15] = 1,
-                false => self.registers[15] = 0,
-            }
+        }
+        if collision {
+            self.registers[15] = 1;
+        } else {
+            self.registers[15] = 0;
         }
     }
 
@@ -579,15 +579,6 @@ impl fmt::Display for Emulator {
             self.delay_timer, self.sound_timer
         );
 
-        // write!(
-        //     f,
-        //     "memory: {}<br>",
-        //     self.memory
-        //         .iter()
-        //         .map(|&x| format!("{:X},", x))
-        //         .collect::<String>()
-        // );
-
         write!(f, "stack pointer: {}<br>", self.stack_pointer);
         write!(
             f,
@@ -620,9 +611,10 @@ fn u8_to_bools(byte: u8) -> [bool; 8] {
     let mut booleans: [bool; 8] = [true; 8];
 
     for (i, mask) in masks.iter().enumerate() {
-        match byte & mask {
-            mask => booleans[i] = true,
-            _ => booleans[i] = false,
+        if byte & mask == *mask {
+            booleans[i] = true;
+        } else {
+            booleans[i] = false;
         }
     }
 
