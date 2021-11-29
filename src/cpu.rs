@@ -153,29 +153,29 @@ impl Emulator {
 
     // Calls machine code routine (RCA 1802 for COSMAC VIP) at
     // address NNN. Not necessary for most ROMs.
-    fn _0NNN(&mut self) {}
+    fn _0nnn(&mut self) {}
 
     // Clears the screen.
-    fn _00E0(&mut self) {
+    fn _00e0(&mut self) {
         self.screen = [false; 64 * 32];
     }
 
     // Returns from a subroutine.
     // return;
-    fn _00EE(&mut self) {
+    fn _00ee(&mut self) {
         self.stack_pointer -= 1;
         self.program_counter = self.stack[self.stack_pointer];
     }
 
     // Jumps to address NNN.
     // goto NNN.
-    fn _1NNN(&mut self) {
+    fn _1nnn(&mut self) {
         self.program_counter = self.get_second_third_fourth_nibbles_inline();
     }
 
     // Calls subroutine at NNN.
     // *(0xNNN)()
-    fn _2NNN(&mut self) {
+    fn _2nnn(&mut self) {
         self.stack[self.stack_pointer] = self.program_counter;
         self.stack_pointer += 1;
         self.program_counter = self.get_second_third_fourth_nibbles_inline();
@@ -184,7 +184,7 @@ impl Emulator {
     // Skips the next instruction if VX equals NN.
     // (Usually the next instruction is a jump to skip a code block)
     // if (Vx == NN)
-    fn _3XNN(&mut self) {
+    fn _3xnn(&mut self) {
         if self.get_vx() == self.get_third_and_fourth_nibbles_inline() {
             self.skip_next_instruction();
         }
@@ -193,7 +193,7 @@ impl Emulator {
     // Skips the next instruction if VX does not equal NN.
     // (Usually the next instruction is a jump to skip a code block);
     // if (Vx != NN)
-    fn _4XNN(&mut self) {
+    fn _4xnn(&mut self) {
         if self.get_vx() != self.get_third_and_fourth_nibbles_inline() {
             self.skip_next_instruction();
         }
@@ -202,7 +202,7 @@ impl Emulator {
     // Skips the next instruction if VX equals VY.
     // (Usually the next instruction is a jump to skip a code block).
     // if (Vx == Vy)
-    fn _5XY0(&mut self) {
+    fn _5xy0(&mut self) {
         if self.get_vx() == self.get_vy() {
             self.skip_next_instruction();
         }
@@ -210,46 +210,46 @@ impl Emulator {
 
     // Sets VX to NN.
     // Vx = N
-    fn _6XNN(&mut self) {
+    fn _6xnn(&mut self) {
         self.registers[self.current_opcode.second_nibble as usize] =
             self.get_third_and_fourth_nibbles_inline();
     }
 
     // Adds NN to VX. (Carry flag is not changed);
     // Vx += NN
-    fn _7XNN(&mut self) {
+    fn _7xnn(&mut self) {
         self.registers[self.current_opcode.second_nibble as usize] +=
             self.get_third_and_fourth_nibbles_inline();
     }
 
     // Sets VX to the value of VY.
     // Vx = Vy
-    fn _8XY0(&mut self) {
+    fn _8xy0(&mut self) {
         self.registers[self.current_opcode.second_nibble as usize] = self.get_vy();
     }
 
     // Sets VX to VX or VY. (Bitwise OR operation).
     // Vx |= Vy
-    fn _8XY1(&mut self) {
+    fn _8xy1(&mut self) {
         self.registers[self.current_opcode.second_nibble as usize] |= self.get_vy();
     }
 
     // Sets VX to VX and VY. (Bitwise AND operation).
     // Vx &= Vy
-    fn _8XY2(&mut self) {
+    fn _8xy2(&mut self) {
         self.registers[self.current_opcode.second_nibble as usize] &= self.get_vy();
     }
 
     // Sets VX to VX xor VY.
     // Vx ^= Vy
-    fn _8XY3(&mut self) {
+    fn _8xy3(&mut self) {
         self.registers[self.current_opcode.second_nibble as usize] ^= self.get_vy();
     }
 
     // Adds VY to VX. VF is set to 1 when there's a carry,
     // and to 0 when there is not.
     // Vx += Vy
-    fn _8XY4(&mut self) {
+    fn _8xy4(&mut self) {
         let sum = (self.get_vx() + self.get_vy()) as u16;
         if sum > 255 {
             self.registers[15] = 1;
@@ -260,7 +260,7 @@ impl Emulator {
     // VY is subtracted from VX. VF is set to 0 when there's a borrow,
     // and 1 when there is not.
     // Vx -= Vy
-    fn _8XY5(&mut self) {
+    fn _8xy5(&mut self) {
         let substraction = (self.get_vx() - self.get_vy()) as i8;
         if substraction < 0 {
             self.registers[15] = 0;
@@ -273,7 +273,7 @@ impl Emulator {
     // Stores the least significant bit of VX in VF and then shifts
     // VX to the right by 1.
     // Vx >>= 1
-    fn _8XY6(&mut self) {
+    fn _8xy6(&mut self) {
         self.registers[15] = 00000001u8 & self.get_vx();
         self.registers[self.current_opcode.second_nibble as usize] >>= 1;
     }
@@ -281,7 +281,7 @@ impl Emulator {
     // Sets VX to VY minus VX. VF is set to 0 when there's a borrow,
     // and 1 when there is not.
     // Vx = Vy - Vx
-    fn _8XY7(&mut self) {
+    fn _8xy7(&mut self) {
         let substraction = (self.get_vy() - self.get_vx()) as i8;
         if substraction < 0 {
             self.registers[15] = 0;
@@ -295,7 +295,7 @@ impl Emulator {
     // Stores the most significant bit of VX in VF
     // and then shifts VX to the left by 1.
     // Vx <<= 1
-    fn _8XYE(&mut self) {
+    fn _8xye(&mut self) {
         self.registers[15] = 128 & self.get_vx();
         self.registers[self.current_opcode.second_nibble as usize] <<= 1;
     }
@@ -303,7 +303,7 @@ impl Emulator {
     // Skips the next instruction if VX does not equal VY.
     // (Usually the next instruction is a jump to skip a code block)
     // if (Vx != Vy)
-    fn _9XY0(&mut self) {
+    fn _9xy0(&mut self) {
         if self.get_vx() != self.get_vy() {
             self.skip_next_instruction();
         }
@@ -311,20 +311,20 @@ impl Emulator {
 
     // Sets I to the address NNN.
     // I = NNN
-    fn ANNN(&mut self) {
+    fn annn(&mut self) {
         self.index_register = self.get_second_third_fourth_nibbles_inline();
     }
 
     // Jumps to the address NNN plus V0.
     // PC = V0 + NNN
-    fn BNNN(&mut self) {
+    fn bnnn(&mut self) {
         self.program_counter =
             self.registers[0] as u16 + self.get_second_third_fourth_nibbles_inline();
     }
 
     // Sets VX to the result of a bitwise and operation on a random number
     // (Typically: 0 to 255) and NN. Vx = rand() & NN
-    fn CXNN(&mut self) {
+    fn cxnn(&mut self) {
         self.registers[self.current_opcode.second_nibble as usize] =
             ((random() * 255.0) as u8) & self.get_third_and_fourth_nibbles_inline();
     }
@@ -336,7 +336,7 @@ impl Emulator {
     // are flipped from set to unset when the sprite is drawn, and to 0 if that
     // does not happen
     // draw(Vx, Vy, N)
-    fn DXYN(&mut self) {
+    fn dxyn(&mut self) {
         let height = self.current_opcode.fourth_nibble;
         let x = self.get_vx();
         let y = self.get_vy();
@@ -367,7 +367,7 @@ impl Emulator {
     // Skips the next instruction if the key stored in VX is pressed.
     // (Usually the next instruction is a jump to skip a code block);
     // if (key() == Vx)
-    fn EX9E(&mut self) {
+    fn ex9e(&mut self) {
         if self.keypad[self.get_vx() as usize] {
             self.skip_next_instruction();
         }
@@ -376,7 +376,7 @@ impl Emulator {
     // Skips the next instruction if the key stored in VX is not pressed.
     // (Usually the next instruction is a jump to skip a code block).
     // if (key() != Vx)
-    fn EXA1(&mut self) {
+    fn exa1(&mut self) {
         if !self.keypad[self.get_vx() as usize] {
             self.skip_next_instruction();
         }
@@ -384,14 +384,14 @@ impl Emulator {
 
     // Sets VX to the value of the delay timer.
     // Vx = get_delay()
-    fn FX07(&mut self) {
+    fn fx07(&mut self) {
         self.registers[self.current_opcode.second_nibble as usize] = self.delay_timer;
     }
 
     // A key press is awaited, and then stored in VX. (Blocking Operation.
     // All instruction halted until next key event);
     // Vx = get_key()
-    fn FX0A(&mut self) {
+    fn fx0a(&mut self) {
         // self.program_counter -= 2;
         // if self.keypad[self.get_vx() as usize] == true {
         //     self.registers[self.current.second_nibble as usize] =  ;
@@ -401,26 +401,26 @@ impl Emulator {
 
     // Sets the delay timer to VX.
     // delay_timer(Vx)
-    fn FX15(&mut self) {
+    fn fx15(&mut self) {
         self.delay_timer = self.get_vx();
     }
 
     // Sets the sound timer to VX.
     // sound_timer(Vx)
-    fn FX18(&mut self) {
+    fn fx18(&mut self) {
         self.sound_timer = self.get_vx();
     }
 
     // Adds VX to I. VF is not affected.
     // I += Vx
-    fn FX1E(&mut self) {
+    fn fx1e(&mut self) {
         self.index_register += self.get_vx() as u16;
     }
 
     // Sets I to the location of the sprite for the character in VX.
     // Characters 0-F (in hexadecimal) are represented by a 4x5 font.
     // I = sprite_addr[Vx]
-    fn FX29(&mut self) {
+    fn fx29(&mut self) {
         self.index_register = self.get_vx() as u16 * 5;
     }
 
@@ -434,7 +434,7 @@ impl Emulator {
     // *(I+0) = BCD(3);
     // *(I+1) = BCD(2);
     // *(I+2) = BCD(1);
-    fn FX33(&mut self) {
+    fn fx33(&mut self) {
         self.memory[self.index_register as usize] = self.get_vx() / 100;
         self.memory[self.index_register as usize + 1] = (self.get_vx() / 10) % 10;
         self.memory[self.index_register as usize + 2] = self.get_vx() % 10;
@@ -444,7 +444,7 @@ impl Emulator {
     // The offset from I is increased by 1 for each value written, but I
     // itself is left unmodified
     // reg_dump(Vx, &I)
-    fn FX55(&mut self) {
+    fn fx55(&mut self) {
         for i in 0..self.current_opcode.second_nibble + 1 {
             self.memory[(self.index_register + i as u16) as usize] = self.registers[i as usize];
         }
@@ -454,7 +454,7 @@ impl Emulator {
     // address I. The offset from I is increased by 1 for each value written,
     // but I itself is left unmodified.
     // reg_load(Vx, &I)
-    fn FX65(&mut self) {
+    fn fx65(&mut self) {
         for i in 0..self.current_opcode.second_nibble + 1 {
             self.registers[i as usize] = self.memory[(self.index_register + i as u16) as usize];
         }
@@ -485,41 +485,41 @@ impl Emulator {
         self.program_counter += 2;
 
         match (first_nibble, second_nibble, third_nibble, fourth_nibble) {
-            (0, 0, 0xE, 0xE) => self._00EE(),
-            (0, 0, 0xE, 0) => self._00E0(),
-            (0, _, _, _) => self._0NNN(),
-            (1, _, _, _) => self._1NNN(),
-            (2, _, _, _) => self._2NNN(),
-            (3, _, _, _) => self._3XNN(),
-            (4, _, _, _) => self._4XNN(),
-            (5, _, _, 0) => self._5XY0(),
-            (6, _, _, _) => self._6XNN(),
-            (7, _, _, _) => self._7XNN(),
-            (8, _, _, 0) => self._8XY0(),
-            (8, _, _, 1) => self._8XY1(),
-            (8, _, _, 2) => self._8XY2(),
-            (8, _, _, 3) => self._8XY3(),
-            (8, _, _, 4) => self._8XY4(),
-            (8, _, _, 5) => self._8XY5(),
-            (8, _, _, 6) => self._8XY6(),
-            (8, _, _, 7) => self._8XY7(),
-            (8, _, _, 0xE) => self._8XYE(),
-            (9, _, _, 0) => self._9XY0(),
-            (0xA, _, _, _) => self.ANNN(),
-            (0xB, _, _, _) => self.BNNN(),
-            (0xC, _, _, _) => self.CXNN(),
-            (0xD, _, _, _) => self.DXYN(),
-            (0xE, _, 9, 0xE) => self.EX9E(),
-            (0xE, _, 0xA, 1) => self.EXA1(),
-            (0xF, _, 0, 7) => self.FX07(),
-            (0xF, _, 0, 0xA) => self.FX0A(),
-            (0xF, _, 1, 5) => self.FX15(),
-            (0xF, _, 1, 8) => self.FX18(),
-            (0xF, _, 1, 0xE) => self.FX1E(),
-            (0xF, _, 2, 9) => self.FX29(),
-            (0xF, _, 3, 3) => self.FX33(),
-            (0xF, _, 5, 5) => self.FX55(),
-            (0xF, _, 6, 5) => self.FX65(),
+            (0, 0, 0xE, 0xE) => self._00ee(),
+            (0, 0, 0xE, 0) => self._00e0(),
+            (0, _, _, _) => self._0nnn(),
+            (1, _, _, _) => self._1nnn(),
+            (2, _, _, _) => self._2nnn(),
+            (3, _, _, _) => self._3xnn(),
+            (4, _, _, _) => self._4xnn(),
+            (5, _, _, 0) => self._5xy0(),
+            (6, _, _, _) => self._6xnn(),
+            (7, _, _, _) => self._7xnn(),
+            (8, _, _, 0) => self._8xy0(),
+            (8, _, _, 1) => self._8xy1(),
+            (8, _, _, 2) => self._8xy2(),
+            (8, _, _, 3) => self._8xy3(),
+            (8, _, _, 4) => self._8xy4(),
+            (8, _, _, 5) => self._8xy5(),
+            (8, _, _, 6) => self._8xy6(),
+            (8, _, _, 7) => self._8xy7(),
+            (8, _, _, 0xE) => self._8xye(),
+            (9, _, _, 0) => self._9xy0(),
+            (0xA, _, _, _) => self.annn(),
+            (0xB, _, _, _) => self.bnnn(),
+            (0xC, _, _, _) => self.cxnn(),
+            (0xD, _, _, _) => self.dxyn(),
+            (0xE, _, 9, 0xE) => self.ex9e(),
+            (0xE, _, 0xA, 1) => self.exa1(),
+            (0xF, _, 0, 7) => self.fx07(),
+            (0xF, _, 0, 0xA) => self.fx0a(),
+            (0xF, _, 1, 5) => self.fx15(),
+            (0xF, _, 1, 8) => self.fx18(),
+            (0xF, _, 1, 0xE) => self.fx1e(),
+            (0xF, _, 2, 9) => self.fx29(),
+            (0xF, _, 3, 3) => self.fx33(),
+            (0xF, _, 5, 5) => self.fx55(),
+            (0xF, _, 6, 5) => self.fx65(),
             _ => {
                 self.screen = [true; 2048];
                 console::log_1(
