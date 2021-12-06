@@ -51,7 +51,7 @@ pub struct Emulator {
     sound_timer: u8,
 
     //input
-    keypad: [bool; 16],
+    pub keypad: [bool; 16],
 }
 
 impl Emulator {
@@ -106,18 +106,6 @@ impl Emulator {
                 self.sound_timer -= 1
             }
             _ => self.sound_timer -= 1,
-        }
-    }
-
-    pub fn update_key_press(&mut self, key: String) {
-        match key.as_str() {
-            "A" => self.keypad[10] = true,
-            "B" => self.keypad[11] = true,
-            "C" => self.keypad[12] = true,
-            "D" => self.keypad[13] = true,
-            "E" => self.keypad[14] = true,
-            "F" => self.keypad[15] = true,
-            _ => self.keypad[key.parse::<usize>().unwrap()] = true,
         }
     }
 
@@ -594,6 +582,15 @@ impl fmt::Display for Emulator {
             f,
             "<tr><td>stack</td> <td>{}<td></tr>",
             self.stack
+                .iter()
+                .map(|&x| format!("{},", x))
+                .collect::<String>()
+        );
+
+        write!(
+            f,
+            "<tr><td>keypad</td> <td>{}<td></tr>",
+            self.keypad
                 .iter()
                 .map(|&x| format!("{},", x))
                 .collect::<String>()

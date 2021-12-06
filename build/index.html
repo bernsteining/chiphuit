@@ -33,7 +33,7 @@
         // generate keypad
         let keypad = "";
         keys.forEach(key => {
-            keypad = keypad + `<div class="key" onclick="handle_input('${key}')" id="${key}">${key}</div>`;
+            keypad = keypad + `<div class="key" id="${key}">${key}</div>`;
 
         });
         document.getElementById("keypad").innerHTML = keypad;
@@ -41,7 +41,7 @@
         // handle keyboard
         function keyboard_game(event) {
             if (keys.includes(event.key)) {
-                handle_input(event.key);
+                document.getElementById(event.key).click();;
             }
         }
 

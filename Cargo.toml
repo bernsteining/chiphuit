@@ -34,7 +34,10 @@ features = [
   'Window',
   'CanvasRenderingContext2d',
   'ImageData',
-  'console'
+  'console',
+  'Event',
+  'MouseEvent',
+  'KeyboardEvent'
 ]
 
 

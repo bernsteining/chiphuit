@@ -1,10 +1,10 @@
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
+use std::num::ParseIntError;
 use std::rc::Rc;
+use std::sync::Arc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::console;
-
-use std::num::ParseIntError;
+use web_sys::{console, Event, MouseEvent};
 
 pub fn decode_hex(s: &str) -> Result<Vec<u8>, ParseIntError> {
     (0..s.len())
@@ -29,6 +29,10 @@ pub fn main() -> Result<(), JsValue> {
         .get_element_by_id("emulator_state")
         .expect("should have the emulator state element");
 
+    let keys = [
+        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F",
+    ];
+
     let f = Rc::new(RefCell::new(None));
     let g = f.clone();
 
@@ -50,15 +54,31 @@ pub fn main() -> Result<(), JsValue> {
 
     let mut emulator = cpu::Emulator::new();
 
+    let k = Rc::new(RefCell::new([false; 16]));
+
+    for (index, key) in keys.iter().enumerate() {
+        let tmp_key = document
+            .get_element_by_id(key)
+            .expect("should have a keypad key.");
+
+        let k1 = Rc::clone(&k);
+        let closure = Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
+            k1.borrow_mut()[index] ^= true;
+        }) as Box<dyn FnMut(_)>);
+
+        tmp_key.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())?;
+        closure.forget();
+    }
+
     emulator.load_font();
     emulator.load_game(rom_test);
 
+    let k2 = Rc::clone(&k);
     // EVENT LOOP
     *g.borrow_mut() = Some(Closure::wrap(Box::new(move || {
         set_timeout(&w2, t1.borrow().as_ref().unwrap(), 1);
 
-        emulator.update_key_press(handle_input("A".to_owned()));
-
+        emulator.keypad = *k2.borrow_mut();
         emulator.cycle();
 
         emulator_state.set_inner_html(&emulator.to_string());
@@ -83,10 +103,4 @@ fn set_timeout(window: &web_sys::Window, f: &Closure<dyn FnMut()>, timeout_ms: i
             timeout_ms,
         )
         .expect("should register `setTimeout` OK")
-}
-
-#[wasm_bindgen]
-pub fn handle_input(key: String) -> String {
-    console::log_1(&format!("Key pressed: {:}.", key).into());
-    key
 }
