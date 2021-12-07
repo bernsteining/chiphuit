@@ -40,8 +40,8 @@
 
         // handle keyboard
         function keyboard_game(event) {
-            if (keys.includes(event.key)) {
-                document.getElementById(event.key).click();;
+            if (keys.includes(event.key.toUpperCase())) {
+                document.getElementById(event.key.toUpperCase()).click();
             }
         }
 
