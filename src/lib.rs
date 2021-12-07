@@ -1,10 +1,8 @@
-use std::cell::{Cell, RefCell};
+use std::cell::RefCell;
 use std::num::ParseIntError;
 use std::rc::Rc;
-use std::sync::Arc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{console, Event, MouseEvent};
 
 pub fn decode_hex(s: &str) -> Result<Vec<u8>, ParseIntError> {
     (0..s.len())
@@ -29,10 +27,6 @@ pub fn main() -> Result<(), JsValue> {
         .get_element_by_id("emulator_state")
         .expect("should have the emulator state element");
 
-    let keys = [
-        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F",
-    ];
-
     let f = Rc::new(RefCell::new(None));
     let g = f.clone();
 
@@ -56,19 +50,21 @@ pub fn main() -> Result<(), JsValue> {
 
     let k = Rc::new(RefCell::new([false; 16]));
 
-    for (index, key) in keys.iter().enumerate() {
-        let tmp_key = document
-            .get_element_by_id(key)
-            .expect("should have a keypad key.");
+    set_keypad(&document, &k);
 
-        let k1 = Rc::clone(&k);
-        let closure = Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
-            k1.borrow_mut()[index] ^= true;
-        }) as Box<dyn FnMut(_)>);
+    // for (index, key) in keys.iter().enumerate() {
+    //     let tmp_key = document
+    //         .get_element_by_id(key)
+    //         .expect("should have a keypad key.");
 
-        tmp_key.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())?;
-        closure.forget();
-    }
+    //     let k1 = Rc::clone(&k);
+    //     let closure = Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
+    //         k1.borrow_mut()[index] ^= true;
+    //     }) as Box<dyn FnMut(_)>);
+
+    //     tmp_key.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())?;
+    //     closure.forget();
+    // }
 
     emulator.load_font();
     emulator.load_game(rom_test);
@@ -103,4 +99,31 @@ fn set_timeout(window: &web_sys::Window, f: &Closure<dyn FnMut()>, timeout_ms: i
             timeout_ms,
         )
         .expect("should register `setTimeout` OK")
+}
+
+fn set_keypad(document: &web_sys::Document, k: &Rc<RefCell<[bool; 16]>>) {
+    // instanciate keypad element here with correct class name
+    // also pass keys as function parameter to get genericity
+    // => get keypad bindings from any Emulator struct
+
+    for (index, key) in [
+        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F",
+    ]
+    .iter()
+    .enumerate()
+    {
+        // set keypad keys as child of keypad in the loop
+
+        let keypad_key = document.get_element_by_id(key).unwrap();
+
+        let k1 = Rc::clone(&k);
+        let closure = Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
+            k1.borrow_mut()[index] ^= true;
+        }) as Box<dyn FnMut(_)>);
+
+        keypad_key
+            .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+            .unwrap();
+        closure.forget()
+    }
 }
