@@ -376,15 +376,15 @@ impl Emulator {
         self.registers[self.current_opcode.second_nibble as usize] = self.delay_timer;
     }
 
-    // A key press is awaited, and then stored in VX. (Blocking Operation.
+    // A key press is awaited, and then stored in VX. (Blocking Operation).
     // All instruction halted until next key event);
     // Vx = get_key()
     fn fx0a(&mut self) {
-        // self.program_counter -= 2;
-        // if self.keypad[self.get_vx() as usize] == true {
-        //     self.registers[self.current.second_nibble as usize] =  ;
-        //     self.program_counter +=2;
-        // }
+        self.program_counter -= 2;
+        if self.keypad[self.get_vx() as usize] == true {
+            self.registers[self.current_opcode.second_nibble as usize] =  self.get_vx();
+            self.program_counter +=2;
+        }
     }
 
     // Sets the delay timer to VX.
