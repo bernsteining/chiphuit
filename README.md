@@ -18,3 +18,4 @@ TODO:
 - add gamepad support with APIs https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.GamepadEvent.html & https://developer.mozilla.org/en-US/docs/Web/API/GamepadEvent
 - allow other compilation targets than WASM
 - allow tracing opcodes
+- use gloo to get rid of ugly closures everywhere with Rcs
