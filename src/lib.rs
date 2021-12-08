@@ -28,13 +28,22 @@ pub fn main() -> Result<(), JsValue> {
         .document()
         .expect("should a document.");
 
+    let emulator_state = document
+        .create_element("div")
+        .expect("should have an emulator state in top right corner.");
+
+    emulator_state.set_id("emulator_state");
+    emulator_state.set_class_name("emulator_state");
+
+    document
+        .body()
+        .expect("document should have a body")
+        .append_child(&emulator_state)
+        .unwrap();
+
     let window = web_sys::window().expect("should have a window.");
     let window2 = web_sys::window().expect("should have a window.");
     let window3 = web_sys::window().expect("should have a window.");
-
-    let emulator_state = document
-        .get_element_by_id("emulator_state")
-        .expect("should have the emulator state element");
 
     let f = Rc::new(RefCell::new(None));
     let g = f.clone();
@@ -71,11 +80,6 @@ pub fn main() -> Result<(), JsValue> {
         emulator.keypad = [false; 16];
 
         emulator_state.set_inner_html(&emulator.to_string());
-        document
-            .body()
-            .expect("document should have a body")
-            .append_child(&emulator_state)
-            .unwrap();
 
         graphics::draw_screen(&context, emulator.screen);
     }) as Box<dyn FnMut()>));
@@ -95,7 +99,15 @@ fn set_timeout(window: &web_sys::Window, f: &Closure<dyn FnMut()>, timeout_ms: i
 }
 
 fn set_keypad(document: &web_sys::Document, k: &Rc<RefCell<[bool; 16]>>) {
-    let keypad = document.get_element_by_id("keypad").unwrap();
+    // let keypad = document
+    //     .create_element("div")
+    //     .expect("should have a keypad.");
+    // keypad.set_id("keypad");
+    // keypad.set_class_name("keypad-base");
+
+    let keypad = document
+        .get_element_by_id("keypad")
+        .expect("should have a keypad.");
 
     for (index, key) in [
         "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F",
