@@ -3,6 +3,7 @@ use std::num::ParseIntError;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
+use web_sys::Node;
 
 pub fn decode_hex(s: &str) -> Result<Vec<u8>, ParseIntError> {
     (0..s.len())
@@ -22,7 +23,15 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 #[wasm_bindgen(start)]
 pub fn main() -> Result<(), JsValue> {
     let context = graphics::get_context();
-    let document = web_sys::window().unwrap().document().unwrap();
+    let document = web_sys::window()
+        .unwrap()
+        .document()
+        .expect("should a document.");
+
+    let window = web_sys::window().expect("should have a window.");
+    let window2 = web_sys::window().expect("should have a window.");
+    let window3 = web_sys::window().expect("should have a window.");
+
     let emulator_state = document
         .get_element_by_id("emulator_state")
         .expect("should have the emulator state element");
@@ -33,12 +42,9 @@ pub fn main() -> Result<(), JsValue> {
     let t1 = Rc::new(RefCell::new(None));
     let t2 = t1.clone();
 
-    let w = graphics::window();
     *t2.borrow_mut() = Some(Closure::wrap(Box::new(move || {
-        graphics::request_animation_frame(&w, f.borrow().as_ref().unwrap());
+        graphics::request_animation_frame(&window, f.borrow().as_ref().unwrap());
     }) as Box<dyn FnMut()>));
-
-    let w2 = graphics::window();
 
     // HARDCODE GAME ATM
     let rom_test = decode_hex(
@@ -52,30 +58,17 @@ pub fn main() -> Result<(), JsValue> {
 
     set_keypad(&document, &k);
 
-    // for (index, key) in keys.iter().enumerate() {
-    //     let tmp_key = document
-    //         .get_element_by_id(key)
-    //         .expect("should have a keypad key.");
-
-    //     let k1 = Rc::clone(&k);
-    //     let closure = Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
-    //         k1.borrow_mut()[index] ^= true;
-    //     }) as Box<dyn FnMut(_)>);
-
-    //     tmp_key.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())?;
-    //     closure.forget();
-    // }
-
     emulator.load_font();
     emulator.load_game(rom_test);
 
     let k2 = Rc::clone(&k);
     // EVENT LOOP
     *g.borrow_mut() = Some(Closure::wrap(Box::new(move || {
-        set_timeout(&w2, t1.borrow().as_ref().unwrap(), 1);
+        set_timeout(&window2, t1.borrow().as_ref().unwrap(), 1);
 
         emulator.keypad = *k2.borrow_mut();
         emulator.cycle();
+        emulator.keypad = [false; 16];
 
         emulator_state.set_inner_html(&emulator.to_string());
         document
@@ -87,7 +80,7 @@ pub fn main() -> Result<(), JsValue> {
         graphics::draw_screen(&context, emulator.screen);
     }) as Box<dyn FnMut()>));
 
-    graphics::request_animation_frame(&graphics::window(), g.borrow().as_ref().unwrap());
+    graphics::request_animation_frame(&window3, g.borrow().as_ref().unwrap());
 
     Ok(())
 }
@@ -102,9 +95,7 @@ fn set_timeout(window: &web_sys::Window, f: &Closure<dyn FnMut()>, timeout_ms: i
 }
 
 fn set_keypad(document: &web_sys::Document, k: &Rc<RefCell<[bool; 16]>>) {
-    // instanciate keypad element here with correct class name
-    // also pass keys as function parameter to get genericity
-    // => get keypad bindings from any Emulator struct
+    let keypad = document.get_element_by_id("keypad").unwrap();
 
     for (index, key) in [
         "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F",
@@ -112,9 +103,13 @@ fn set_keypad(document: &web_sys::Document, k: &Rc<RefCell<[bool; 16]>>) {
     .iter()
     .enumerate()
     {
-        // set keypad keys as child of keypad in the loop
-
-        let keypad_key = document.get_element_by_id(key).unwrap();
+        let keypad_key = document.create_element("div").unwrap();
+        keypad_key.set_id(key);
+        keypad_key.set_inner_html(key);
+        keypad_key.set_class_name("key");
+        keypad
+            .append_child(&Node::from(keypad_key.clone()))
+            .unwrap();
 
         let k1 = Rc::clone(&k);
         let closure = Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {

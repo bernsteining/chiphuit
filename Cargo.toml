@@ -37,8 +37,7 @@ features = [
   'console',
   'Event',
   'MouseEvent',
-  'KeyboardEvent'
-]
+  'Node']
 
 
 [dev-dependencies]

@@ -12,10 +12,6 @@ pub fn request_animation_frame(window: &web_sys::Window, f: &Closure<dyn FnMut()
         .expect("should register `requestAnimationFrame` OK")
 }
 
-pub fn window() -> web_sys::Window {
-    web_sys::window().expect("no global `window` exists")
-}
-
 pub fn get_context() -> web_sys::CanvasRenderingContext2d {
     web_sys::window()
         .unwrap()
