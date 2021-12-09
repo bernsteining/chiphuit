@@ -6,8 +6,9 @@ use web_sys::{CanvasRenderingContext2d, ImageData};
 pub const WIDTH: u32 = 64;
 pub const HEIGHT: u32 = 32;
 
-pub fn request_animation_frame(window: &web_sys::Window, f: &Closure<dyn FnMut()>) -> i32 {
-    window
+pub fn request_animation_frame(f: &Closure<dyn FnMut()>) -> i32 {
+    web_sys::window()
+        .expect("should have a window.")
         .request_animation_frame(f.as_ref().unchecked_ref())
         .expect("should register `requestAnimationFrame` OK")
 }

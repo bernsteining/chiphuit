@@ -134,7 +134,6 @@ impl Emulator {
         self.registers[self.current_opcode.third_nibble as usize]
     }
 
-    // fn get_three_last_nibbles(&mut self) -> u16 {}
     fn skip_next_instruction(&mut self) {
         self.program_counter += 2;
     }
@@ -382,8 +381,8 @@ impl Emulator {
     fn fx0a(&mut self) {
         self.program_counter -= 2;
         if self.keypad[self.get_vx() as usize] == true {
-            self.registers[self.current_opcode.second_nibble as usize] =  self.get_vx();
-            self.program_counter +=2;
+            self.registers[self.current_opcode.second_nibble as usize] = self.get_vx();
+            self.program_counter += 2;
         }
     }
 
@@ -457,22 +456,21 @@ impl Emulator {
     }
 
     pub fn process_opcode(&mut self, opcode: u16) {
-        // use nom to parse opcodes?
-        let first_nibble = ((opcode & 0xF000) >> 12) as u8;
-        let second_nibble = ((opcode & 0x0F00) >> 8) as u8;
-        let third_nibble = ((opcode & 0x00F0) >> 4) as u8;
-        let fourth_nibble = (opcode & 0x000F) as u8;
-
         self.current_opcode = OpCode {
-            first_nibble,
-            second_nibble,
-            third_nibble,
-            fourth_nibble,
+            first_nibble: ((opcode & 0xF000) >> 12) as u8,
+            second_nibble: ((opcode & 0x0F00) >> 8) as u8,
+            third_nibble: ((opcode & 0x00F0) >> 4) as u8,
+            fourth_nibble: (opcode & 0x000F) as u8,
         };
 
         self.program_counter += 2;
 
-        match (first_nibble, second_nibble, third_nibble, fourth_nibble) {
+        match (
+            self.current_opcode.first_nibble,
+            self.current_opcode.second_nibble,
+            self.current_opcode.third_nibble,
+            self.current_opcode.fourth_nibble,
+        ) {
             (0, 0, 0xE, 0xE) => self._00ee(),
             (0, 0, 0xE, 0) => self._00e0(),
             (0, _, _, _) => self._0nnn(),

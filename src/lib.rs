@@ -41,18 +41,13 @@ pub fn main() -> Result<(), JsValue> {
         .append_child(&emulator_state)
         .unwrap();
 
-    let window = web_sys::window().expect("should have a window.");
-    let window2 = web_sys::window().expect("should have a window.");
-    let window3 = web_sys::window().expect("should have a window.");
-
     let f = Rc::new(RefCell::new(None));
     let g = f.clone();
 
     let t1 = Rc::new(RefCell::new(None));
-    let t2 = t1.clone();
 
-    *t2.borrow_mut() = Some(Closure::wrap(Box::new(move || {
-        graphics::request_animation_frame(&window, f.borrow().as_ref().unwrap());
+    *t1.borrow_mut() = Some(Closure::wrap(Box::new(move || {
+        graphics::request_animation_frame(f.borrow().as_ref().unwrap());
     }) as Box<dyn FnMut()>));
 
     // HARDCODE GAME ATM
@@ -71,9 +66,10 @@ pub fn main() -> Result<(), JsValue> {
     emulator.load_game(rom_test);
 
     let k2 = Rc::clone(&k);
+
     // EVENT LOOP
     *g.borrow_mut() = Some(Closure::wrap(Box::new(move || {
-        set_timeout(&window2, t1.borrow().as_ref().unwrap(), 1);
+        set_timeout(t1.borrow().as_ref().unwrap(), 1);
 
         emulator.keypad = *k2.borrow_mut();
         emulator.cycle();
@@ -84,13 +80,14 @@ pub fn main() -> Result<(), JsValue> {
         graphics::draw_screen(&context, emulator.screen);
     }) as Box<dyn FnMut()>));
 
-    graphics::request_animation_frame(&window3, g.borrow().as_ref().unwrap());
+    graphics::request_animation_frame(g.borrow().as_ref().unwrap());
 
     Ok(())
 }
 
-fn set_timeout(window: &web_sys::Window, f: &Closure<dyn FnMut()>, timeout_ms: i32) -> i32 {
-    window
+fn set_timeout(f: &Closure<dyn FnMut()>, timeout_ms: i32) -> i32 {
+    web_sys::window()
+        .expect("should have a window.")
         .set_timeout_with_callback_and_timeout_and_arguments_0(
             f.as_ref().unchecked_ref(),
             timeout_ms,
