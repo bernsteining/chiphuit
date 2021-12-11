@@ -69,13 +69,14 @@ pub fn main() -> Result<(), JsValue> {
 
     // EVENT LOOP
     *g.borrow_mut() = Some(Closure::wrap(Box::new(move || {
-        set_timeout(t1.borrow().as_ref().unwrap(), 1);
+        set_timeout(t1.borrow().as_ref().unwrap(), 20);
 
         emulator.keypad = *k2.borrow_mut();
-        emulator.cycle();
+        for _ in 0..10 {
+            emulator.cycle();
+            emulator_state.set_inner_html(&emulator.to_string());
+        }
         emulator.keypad = [false; 16];
-
-        emulator_state.set_inner_html(&emulator.to_string());
 
         graphics::draw_screen(&context, emulator.screen);
     }) as Box<dyn FnMut()>));
