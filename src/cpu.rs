@@ -52,6 +52,9 @@ pub struct Emulator {
 
     //input
     pub keypad: [bool; 16],
+
+    //breakpoint state
+    pub running: bool,
 }
 
 impl Emulator {
@@ -83,6 +86,9 @@ impl Emulator {
 
             //input
             keypad: [false; 16],
+
+            //breakpoint state
+            running: true,
         }
     }
 
@@ -593,6 +599,8 @@ impl fmt::Display for Emulator {
                 .map(|&x| format!("{},", x))
                 .collect::<String>()
         );
+
+        write!(f, "<tr><td>running</td> <td>{:?}<td></tr>", self.running);
         write!(f, "</table>",)
     }
 }

@@ -105,6 +105,7 @@ input[type="file"] {
   font-size: 20px;
   text-align: center;
   padding-top: 17px;
+  cursor: pointer;
 }
 
 .key:hover {
@@ -118,4 +119,26 @@ input[type="file"] {
   position: fixed;
   top: 0;
   right: 0;
+}
+
+.breakpoint {
+  background-color: darkmagenta;
+  border: 2px solid black;
+  border-radius: 5px;
+  font-size: 20px;
+  text-align: center;
+  max-width: min-content;
+  position: absolute;
+  display: inline-block;
+  padding: 0px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  padding-right: 10px;
+  padding-left: 10px;
+  cursor: pointer;
+}
+
+.breakpoint:hover {
+  border: 1px solid #eeeeee;
+  background-color: rgb(243, 243, 243);
 }
