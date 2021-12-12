@@ -37,8 +37,11 @@ features = [
   'console',
   'Event',
   'MouseEvent',
-  'Node']
-
+  'Node',
+  'FileReader',
+  'File',
+  'FileList',
+  'HtmlInputElement']
 
 [dev-dependencies]
 wasm-bindgen-test = "0.2"

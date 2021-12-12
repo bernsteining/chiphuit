@@ -10,8 +10,8 @@ https://github.com/corax89/chip8-test-rom
 
 TODO:
 
-- Get rid of hardcoded ROM and allow user to select one, and launch emulator once game is loaded in memory
-- Allow setting breakpoint and modifying emulator variables
+- Get rid of hardcoded ROM, and launch emulator once the user game is loaded in memory
+- Allow modifying emulator variables
 - factorize emulator state rendering
 - add beep sound with web_sys::{AudioContext, OscillatorType};
 - add gamepad support with APIs https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.GamepadEvent.html & https://developer.mozilla.org/en-US/docs/Web/API/GamepadEvent

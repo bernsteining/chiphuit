@@ -3,7 +3,6 @@ use std::num::ParseIntError;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::Node;
 
 pub fn decode_hex(s: &str) -> Result<Vec<u8>, ParseIntError> {
     (0..s.len())
@@ -14,6 +13,7 @@ pub fn decode_hex(s: &str) -> Result<Vec<u8>, ParseIntError> {
 
 mod cpu;
 mod graphics;
+mod input;
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
 #[cfg(feature = "wee_alloc")]
@@ -61,8 +61,9 @@ pub fn main() -> Result<(), JsValue> {
     let k = Rc::new(RefCell::new([false; 16]));
     let b = Rc::new(RefCell::new(false));
 
-    set_keypad(&document, &k);
-    set_breakpoint(&document, &b);
+    input::set_keypad(&document, &k);
+    input::set_breakpoint(&document, &b);
+    input::get_file_reader(&document);
 
     emulator.load_font();
     emulator.load_game(rom_test);
@@ -111,62 +112,4 @@ fn set_timeout(f: &Closure<dyn FnMut()>, timeout_ms: i32) -> i32 {
             timeout_ms,
         )
         .expect("should register `setTimeout` OK")
-}
-
-fn set_keypad(document: &web_sys::Document, k: &Rc<RefCell<[bool; 16]>>) {
-    // document
-    //     .create_element("keypad")
-    //     .expect("should have a keypad.");
-    let keypad = document
-        .get_element_by_id("keypad")
-        .expect("should have a keypad.");
-    keypad.set_class_name("keypad-base");
-
-    for (index, key) in [
-        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F",
-    ]
-    .iter()
-    .enumerate()
-    {
-        let keypad_key = document.create_element("div").unwrap();
-        keypad_key.set_id(key);
-        keypad_key.set_inner_html(key);
-        keypad_key.set_class_name("key");
-
-        keypad
-            .append_child(&Node::from(keypad_key.clone()))
-            .unwrap();
-
-        let k1 = Rc::clone(&k);
-        let closure = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
-            k1.borrow_mut()[index] ^= true;
-        }) as Box<dyn FnMut(_)>);
-
-        keypad_key
-            .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
-            .unwrap();
-        closure.forget()
-    }
-}
-
-fn set_breakpoint(document: &web_sys::Document, b: &Rc<RefCell<bool>>) {
-    document
-        .create_element("breakpoint")
-        .expect("should have a breakpoint.");
-    let breakpoint = document
-        .get_element_by_id("breakpoint")
-        .expect("should have a breakpoint.");
-
-    breakpoint.set_class_name("breakpoint");
-    breakpoint.set_inner_html("play");
-
-    let b1 = Rc::clone(&b);
-    let closure = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
-        *b1.borrow_mut() ^= true;
-    }) as Box<dyn FnMut(_)>);
-
-    breakpoint
-        .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
-        .unwrap();
-    closure.forget()
 }
