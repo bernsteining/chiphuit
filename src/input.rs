@@ -1,4 +1,4 @@
-use js_sys::{Object, Uint8Array};
+use js_sys::JsString;
 use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
@@ -63,15 +63,16 @@ pub fn set_breakpoint(document: &web_sys::Document, b: &Rc<RefCell<bool>>) {
     closure.forget()
 }
 
-pub fn get_file_reader(document: &web_sys::Document) {
+pub fn get_file_reader(document: &web_sys::Document, v: &Rc<RefCell<Vec<u8>>>) {
     let filereader = FileReader::new().unwrap().dyn_into::<FileReader>().unwrap();
-
+    let v1 = Rc::clone(&v);
     let onload = Closure::wrap(Box::new(move |event: Event| {
         let element = event.target().unwrap().dyn_into::<FileReader>().unwrap();
         let data = element.result().unwrap();
-        let js_data = js_sys::Uint8Array::from(data);
-        // let rust_str: String = js_data.to_string().into();
-        console::log_1(&format!("plz1 {:?}", js_data).into());
+        let game_string: JsString = data.dyn_into::<JsString>().unwrap();
+        let game_vec: Vec<u8> = game_string.iter().map(|x| x as u8).collect();
+        *v1.borrow_mut() = game_vec.clone();
+        console::log_1(&format!("game loaded: {:?}", game_string).into());
     }) as Box<dyn FnMut(_)>);
 
     filereader.set_onloadend(Some(onload.as_ref().unchecked_ref()));
@@ -93,7 +94,6 @@ pub fn get_file_reader(document: &web_sys::Document) {
         let filelist = element.files().unwrap();
 
         let _file = filelist.get(0).expect("should have a file handle.");
-        // filereader.read_as_array_buffer(&_file).unwrap();
         filereader.read_as_binary_string(&_file).unwrap();
     }) as Box<dyn FnMut(_)>);
     fileinput

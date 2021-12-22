@@ -1,7 +1,11 @@
 use js_sys::Math::random;
 use std::fmt;
 
-use web_sys::console;
+// use web_sys::console;
+
+use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
+use web_sys::{console, Event, File, FileList, FileReader, HtmlInputElement, Node};
 
 pub const FONTS: [u8; 80] = [
     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
