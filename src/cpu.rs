@@ -59,9 +59,6 @@ pub struct Emulator {
 
     //breakpoint state
     pub running: bool,
-
-    //cartridge state
-    pub cartridge_loaded: bool,
 }
 
 impl Emulator {
@@ -96,9 +93,6 @@ impl Emulator {
 
             //breakpoint state
             running: true,
-
-            //cartridge state
-            cartridge_loaded: false,
         }
     }
 
@@ -108,6 +102,21 @@ impl Emulator {
 
     pub fn load_game(&mut self, game: Vec<u8>) {
         self.memory[512..512 + game.len()].copy_from_slice(&game);
+    }
+
+    pub fn hotswap(&mut self, game: Vec<u8>) {
+        //reinitialize emulator state
+        self.memory = [0; 4096];
+        self.screen = [false; 64 * 32];
+        self.registers = [0; 16];
+        self.index_register = 0;
+        self.program_counter = 512;
+        self.stack = [0; 16];
+        self.stack_pointer = 0;
+        self.delay_timer = 0;
+        self.sound_timer = 0;
+
+        self.load_game(game);
     }
 
     fn update_timers(&mut self) {

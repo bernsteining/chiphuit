@@ -53,9 +53,9 @@ pub fn main() -> Result<(), JsValue> {
         emulator.keypad = *k2.borrow_mut();
         emulator.running = *b2.borrow_mut();
 
-        if !emulator.cartridge_loaded && !game.borrow().is_empty() {
-            emulator.load_game(game.borrow().clone());
-            emulator.cartridge_loaded = !emulator.cartridge_loaded;
+        if !game.borrow().is_empty() {
+            emulator.hotswap(game.borrow().clone());
+            game.borrow_mut().clear();
         }
 
         if emulator.running {
