@@ -59,6 +59,9 @@ pub struct Emulator {
 
     //breakpoint state
     pub running: bool,
+
+    //cartridge state
+    pub cartridge_loaded: bool,
 }
 
 impl Emulator {
@@ -93,6 +96,9 @@ impl Emulator {
 
             //breakpoint state
             running: true,
+
+            //cartridge state
+            cartridge_loaded: false,
         }
     }
 

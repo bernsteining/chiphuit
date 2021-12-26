@@ -18,20 +18,9 @@ pub fn main() -> Result<(), JsValue> {
     let document = web_sys::window()
         .unwrap()
         .document()
-        .expect("should a document.");
+        .expect("should have a document.");
 
-    let emulator_state = document
-        .create_element("div")
-        .expect("should have an emulator state in top right corner.");
-
-    emulator_state.set_id("emulator_state");
-    emulator_state.set_class_name("emulator_state");
-
-    document
-        .body()
-        .expect("document should have a body")
-        .append_child(&emulator_state)
-        .unwrap();
+    let emulator_state = graphics::set_emulator_state(&document);
 
     let f = Rc::new(RefCell::new(None));
     let g = f.clone();
@@ -44,8 +33,6 @@ pub fn main() -> Result<(), JsValue> {
 
     let mut emulator = cpu::Emulator::new();
     emulator.load_font();
-
-    let mut game_loaded = false;
 
     let k = Rc::new(RefCell::new([false; 16]));
     let b = Rc::new(RefCell::new(false));
@@ -66,25 +53,15 @@ pub fn main() -> Result<(), JsValue> {
         emulator.keypad = *k2.borrow_mut();
         emulator.running = *b2.borrow_mut();
 
-        if !game_loaded && !game.borrow().is_empty() {
+        if !emulator.cartridge_loaded && !game.borrow().is_empty() {
             emulator.load_game(game.borrow().clone());
-            game_loaded = !game_loaded;
+            emulator.cartridge_loaded = !emulator.cartridge_loaded;
         }
 
-        match emulator.running {
-            true => {
-                for _ in 0..10 {
-                    emulator.cycle();
-                }
-                document
-                    .get_element_by_id("breakpoint")
-                    .unwrap()
-                    .set_inner_html("pause")
+        if emulator.running {
+            for _ in 0..10 {
+                emulator.cycle();
             }
-            false => document
-                .get_element_by_id("breakpoint")
-                .unwrap()
-                .set_inner_html("play"),
         }
 
         emulator_state.set_inner_html(&emulator.to_string());

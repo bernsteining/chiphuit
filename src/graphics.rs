@@ -29,6 +29,23 @@ pub fn get_context() -> web_sys::CanvasRenderingContext2d {
         .expect("Should have a rendering canvas.")
 }
 
+pub fn set_emulator_state(document: &web_sys::Document) -> web_sys::Element {
+    let emulator_state = document
+        .create_element("div")
+        .expect("should have an emulator state in top right corner.");
+
+    emulator_state.set_id("emulator_state");
+    emulator_state.set_class_name("emulator_state");
+
+    document
+        .body()
+        .expect("document should have a body")
+        .append_child(&emulator_state)
+        .unwrap();
+
+    emulator_state
+}
+
 pub fn draw_screen(context: &CanvasRenderingContext2d, boolean_screen: [bool; 64 * 32]) {
     let mut graphic_screen = [0; 64 * 32 * 4];
     for (i, x) in boolean_screen.iter().enumerate() {

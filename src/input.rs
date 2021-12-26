@@ -53,8 +53,22 @@ pub fn set_breakpoint(document: &web_sys::Document, b: &Rc<RefCell<bool>>) {
     breakpoint.set_inner_html("play");
 
     let b1 = Rc::clone(&b);
+
     let closure = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
         *b1.borrow_mut() ^= true;
+
+        let _breakpoint = web_sys::window()
+            .unwrap()
+            .document()
+            .expect("should have a document.")
+            .get_element_by_id("breakpoint")
+            .expect("should have a breakpoint.");
+        let button_content = _breakpoint.inner_html();
+
+        match button_content.as_ref() {
+            "play" => _breakpoint.set_inner_html("pause"),
+            _ => _breakpoint.set_inner_html("play"),
+        }
     }) as Box<dyn FnMut(_)>);
 
     breakpoint
