@@ -6,13 +6,18 @@ use wasm_bindgen::JsCast;
 use web_sys::{console, Event, File, FileList, FileReader, HtmlInputElement, Node};
 
 pub fn set_keypad(document: &web_sys::Document, k: &Rc<RefCell<[bool; 16]>>) {
-    // document
-    //     .create_element("keypad")
-    //     .expect("should have a keypad.");
     let keypad = document
-        .get_element_by_id("keypad")
+        .create_element("keypad")
         .expect("should have a keypad.");
+
+    keypad.set_id("id");
     keypad.set_class_name("keypad-base");
+
+    document
+        .body()
+        .expect("document should have a body")
+        .append_child(&keypad)
+        .unwrap();
 
     for (index, key) in [
         "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F",
@@ -42,15 +47,19 @@ pub fn set_keypad(document: &web_sys::Document, k: &Rc<RefCell<[bool; 16]>>) {
 }
 
 pub fn set_breakpoint(document: &web_sys::Document, b: &Rc<RefCell<bool>>) {
-    document
+    let breakpoint = document
         .create_element("breakpoint")
         .expect("should have a breakpoint.");
-    let breakpoint = document
-        .get_element_by_id("breakpoint")
-        .expect("should have a breakpoint.");
 
+    breakpoint.set_id("breakpoint");
     breakpoint.set_class_name("breakpoint");
     breakpoint.set_inner_html("play");
+
+    document
+        .body()
+        .expect("document should have a body")
+        .append_child(&breakpoint)
+        .unwrap();
 
     let b1 = Rc::clone(&b);
 
@@ -93,11 +102,19 @@ pub fn get_file_reader(document: &web_sys::Document, v: &Rc<RefCell<Vec<u8>>>) {
     onload.forget();
 
     let fileinput: HtmlInputElement = document
-        .get_element_by_id("file-upload")
+        .create_element("input")
         .unwrap()
         .dyn_into::<HtmlInputElement>()
         .unwrap();
+
+    fileinput.set_id("file-upload");
     fileinput.set_type("file");
+
+    document
+        .body()
+        .expect("document should have a body")
+        .append_child(&fileinput)
+        .unwrap();
 
     let callback = Closure::wrap(Box::new(move |event: Event| {
         let element = event

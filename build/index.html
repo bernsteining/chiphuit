@@ -8,20 +8,8 @@
 </head>
 
 <body>
-    <canvas id="canvas" height="32" width="64"></canvas>
-
-    <div class="keypad-base" id="keypad">
-    </div>
-    <div id="breakpoint">
-    </div>
-
-    <label for="file-upload" class="custom-file-upload">
-        <i class="fa fa-cloud-upload"></i> Choose chip8 ROM
-    </label>
-
-    <input id="file-upload" type="file" />
-    <noscript>This page contains webassembly and javascript content, please enable javascript in your
-        browser.</noscript>
+    <label for="file-upload" class="file-upload" >Choose chip8 ROM</label>
+    <noscript>This page contains webassembly and javascript content, please enable javascript in your browser.</noscript>
     <script src='./chiphuit.js'></script>
     <script>
         wasm_bindgen('./chiphuit_bg.wasm');
@@ -34,7 +22,6 @@
                 document.getElementById(event.key.toUpperCase()).click();
             }
         }
-
     </script>
 </body>
 

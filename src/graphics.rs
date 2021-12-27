@@ -13,20 +13,32 @@ pub fn request_animation_frame(f: &Closure<dyn FnMut()>) -> i32 {
         .expect("should register `requestAnimationFrame` OK")
 }
 
-pub fn get_context() -> web_sys::CanvasRenderingContext2d {
-    web_sys::window()
-        .unwrap()
-        .document()
-        .expect("Should have a doc.")
-        .get_element_by_id("canvas")
-        .expect("Should have a canvas.")
+pub fn set_canvas(document: &web_sys::Document) -> web_sys::CanvasRenderingContext2d {
+    let canvas: web_sys::HtmlCanvasElement = document
+        .create_element("canvas")
+        .expect("Should have an element named canvas.")
         .dyn_into::<web_sys::HtmlCanvasElement>()
-        .expect("Should have a HTML canvas element.")
+        .expect("Should have a Canvas element.");
+
+    canvas.set_id("canvas");
+
+    canvas.set_width(64);
+    canvas.set_height(32);
+
+    document
+        .body()
+        .expect("document should have a body")
+        .append_child(&canvas)
+        .unwrap();
+
+    let canvas = canvas
         .get_context("2d")
         .expect("Should have a 2D Context.")
         .expect("Should have a rendering canvas.")
         .dyn_into::<web_sys::CanvasRenderingContext2d>()
-        .expect("Should have a rendering canvas.")
+        .expect("Should have a rendering canvas.");
+
+    canvas
 }
 
 pub fn set_emulator_state(document: &web_sys::Document) -> web_sys::Element {

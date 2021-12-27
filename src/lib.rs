@@ -14,25 +14,14 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 #[wasm_bindgen(start)]
 pub fn main() -> Result<(), JsValue> {
-    let context = graphics::get_context();
     let document = web_sys::window()
         .unwrap()
         .document()
         .expect("should have a document.");
 
+    let context = graphics::set_canvas(&document);
+
     let emulator_state = graphics::set_emulator_state(&document);
-
-    let f = Rc::new(RefCell::new(None));
-    let g = f.clone();
-
-    let t1 = Rc::new(RefCell::new(None));
-
-    *t1.borrow_mut() = Some(Closure::wrap(Box::new(move || {
-        graphics::request_animation_frame(f.borrow().as_ref().unwrap());
-    }) as Box<dyn FnMut()>));
-
-    let mut emulator = cpu::Emulator::new();
-    emulator.load_font();
 
     let k = Rc::new(RefCell::new([false; 16]));
     let b = Rc::new(RefCell::new(false));
@@ -45,6 +34,18 @@ pub fn main() -> Result<(), JsValue> {
     let k2 = Rc::clone(&k);
     let b2 = Rc::clone(&b);
     let game = Rc::clone(&v);
+
+    let f = Rc::new(RefCell::new(None));
+    let g = f.clone();
+
+    let t1 = Rc::new(RefCell::new(None));
+
+    *t1.borrow_mut() = Some(Closure::wrap(Box::new(move || {
+        graphics::request_animation_frame(f.borrow().as_ref().unwrap());
+    }) as Box<dyn FnMut()>));
+
+    let mut emulator = cpu::Emulator::new();
+    emulator.load_font();
 
     // EVENT LOOP
     *g.borrow_mut() = Some(Closure::wrap(Box::new(move || {
