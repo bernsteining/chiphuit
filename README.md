@@ -30,5 +30,5 @@ useful links that helped me / motivated me a lot:
 - factorize emulator state rendering
 - add beep sound with web_sys::{AudioContext, OscillatorType};
 - allow tracing opcodes
-- responsive CSS
+- responsive CSS, especially for the ROM choice button mdr
 - set FPS / emulator speed during runtime
