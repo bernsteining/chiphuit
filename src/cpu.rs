@@ -3,6 +3,7 @@ use std::fmt;
 
 use web_sys::console;
 
+/// Chip8 fonts set.
 pub const FONTS: [u8; 80] = [
     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
     0x20, 0x60, 0x20, 0x20, 0x70, // 1
@@ -22,6 +23,7 @@ pub const FONTS: [u8; 80] = [
     0xF0, 0x80, 0xF0, 0x80, 0x80, // F
 ];
 
+/// A struct to access a chip8's opcodes nibbles.
 pub struct OpCode {
     pub first_nibble: u8,
     pub second_nibble: u8,
@@ -29,35 +31,61 @@ pub struct OpCode {
     pub fourth_nibble: u8,
 }
 
-//write cpu struct with impls
+impl OpCode {
+    /// Util function to read the 3rd and 4th nibbles of the opcode in a single
+    /// u8.
+    fn get_third_and_fourth_nibbles_inline(&mut self) -> u8 {
+        return self.third_nibble << 4 | self.fourth_nibble;
+    }
+
+    /// Util function to read the 1st and 2nd nibbles of the opcode in a single
+    /// u8.
+    fn get_second_third_fourth_nibbles_inline(&mut self) -> u16 {
+        ((self.second_nibble as u16) << 8
+            | (self.third_nibble as u16) << 4
+            | self.fourth_nibble as u16)
+            & 0x0FFF
+    }
+}
+
+///  A struct containing all the fields necessary to emulate chip8.
 pub struct Emulator {
     pub current_opcode: OpCode,
     memory: [u8; 4096],
 
-    //regs
     registers: [u8; 16],
     index_register: u16,
     program_counter: u16,
 
-    //display
     pub screen: [bool; 64 * 32],
 
-    //stack related
     pub stack: [u16; 16],
     stack_pointer: usize,
 
-    //timers
     delay_timer: u8,
     sound_timer: u8,
 
-    //input
     pub keypad: [bool; 16],
 
-    //breakpoint state
     pub running: bool,
 }
 
 impl Emulator {
+    //! Creates a new empty `Emulator`.
+    //!
+    //! Returns an Emulator struct initialized with a memory buffer filled
+    //! with 0s, a blank screen display, and a program counter set to 512 ready
+    //! to process a chip8 ROM whenever a ROM is loaded into memory with the
+    //! method load_game.
+    //!
+    //! # Examples
+    //!
+    //! Basic usage:
+    //!
+    //! ```
+    //! let emulator = Emulator::new();
+    //!
+    //! emulator.load_font();
     pub fn new() -> Emulator {
         Emulator {
             current_opcode: OpCode {
@@ -68,38 +96,41 @@ impl Emulator {
             },
             memory: [0; 4096],
 
-            //regs
             registers: [0; 16],
             index_register: 0,
             program_counter: 512,
 
-            //display
             screen: [false; 64 * 32],
 
-            //stack related
             stack: [0; 16],
             stack_pointer: 0,
 
-            //timers
             delay_timer: 0,
             sound_timer: 0,
 
-            //input
             keypad: [false; 16],
 
-            //breakpoint state
             running: true,
         }
     }
 
+    /// Loads the default font set into the `Emulator` instance's memory from
+    /// offset 0 to 80.
     pub fn load_font(&mut self) {
         self.memory[0..80].copy_from_slice(&FONTS);
     }
 
+    /// Loads the `game` ROM into the `Emulator` instance's memory at offset
+    /// 512.
     pub fn load_game(&mut self, game: Vec<u8>) {
         self.memory[512..512 + game.len()].copy_from_slice(&game);
     }
 
+    /// Hotswaps the `game` ROM intro the `Emulator` instance's memory at
+    /// offset 512. This allows to change the game ran by the `Emulator` at
+    /// runtime without reload the page. `Emulator` fields are reinitialized as
+    /// if `Emulator::new()` was called in order to have a fresh `Emulator`
+    /// state.
     pub fn hotswap(&mut self, game: Vec<u8>) {
         //reinitialize emulator state
         self.memory = [0; 4096];
@@ -115,8 +146,8 @@ impl Emulator {
         self.load_game(game);
     }
 
+    /// Decrements `Emulator` timers.
     fn update_timers(&mut self) {
-        //update timers
         if self.delay_timer > 0 {
             self.delay_timer -= 1
         }
@@ -130,133 +161,134 @@ impl Emulator {
         }
     }
 
-    fn fetch_opcode(&self) -> u16 {
-        (self.memory[self.program_counter as usize] as u16) << 8
-            | self.memory[(self.program_counter as usize + 1) as usize] as u16
+    /// Fetches `Emulator` opcodes from memory in order to process them.
+    fn fetch_opcode(&mut self) {
+        let opcode = (self.memory[self.program_counter as usize] as u16) << 8
+            | self.memory[(self.program_counter as usize + 1) as usize] as u16;
+
+        self.current_opcode = OpCode {
+            first_nibble: ((opcode & 0xF000) >> 12) as u8,
+            second_nibble: ((opcode & 0x0F00) >> 8) as u8,
+            third_nibble: ((opcode & 0x00F0) >> 4) as u8,
+            fourth_nibble: (opcode & 0x000F) as u8,
+        };
     }
 
-    // utils for factorization / readability
-    fn get_third_and_fourth_nibbles_inline(&mut self) -> u8 {
-        return self.current_opcode.third_nibble << 4 | self.current_opcode.fourth_nibble;
-    }
-
-    fn get_second_third_fourth_nibbles_inline(&mut self) -> u16 {
-        ((self.current_opcode.second_nibble as u16) << 8
-            | (self.current_opcode.third_nibble as u16) << 4
-            | self.current_opcode.fourth_nibble as u16)
-            & 0x0FFF
-    }
-
+    /// Get the value of the Xth register with X being the value of the second
+    /// nibble of the opcode.
     fn get_vx(&mut self) -> u8 {
         self.registers[self.current_opcode.second_nibble as usize]
     }
 
+    /// Get the value of the Yth register with Y being the value of the third
+    /// nibble of the opcode.
     fn get_vy(&mut self) -> u8 {
         self.registers[self.current_opcode.third_nibble as usize]
     }
 
+    /// Skip the next instruction by incrementing the program counter by 2.
     fn skip_next_instruction(&mut self) {
         self.program_counter += 2;
     }
 
-    // Calls machine code routine (RCA 1802 for COSMAC VIP) at
-    // address NNN. Not necessary for most ROMs.
+    /// Calls machine code routine (RCA 1802 for COSMAC VIP) at
+    /// address NNN. Not necessary for most ROMs.
     fn _0nnn(&mut self) {}
 
-    // Clears the screen.
+    /// Clears the screen.
     fn _00e0(&mut self) {
         self.screen = [false; 64 * 32];
     }
 
-    // Returns from a subroutine.
-    // return;
+    /// Returns from a subroutine.
+    /// return;
     fn _00ee(&mut self) {
         self.stack_pointer -= 1;
         self.program_counter = self.stack[self.stack_pointer];
     }
 
-    // Jumps to address NNN.
-    // goto NNN.
+    /// Jumps to address NNN.
+    /// goto NNN.
     fn _1nnn(&mut self) {
-        self.program_counter = self.get_second_third_fourth_nibbles_inline();
+        self.program_counter = self.current_opcode.get_second_third_fourth_nibbles_inline();
     }
 
-    // Calls subroutine at NNN.
-    // *(0xNNN)()
+    /// Calls subroutine at NNN.
+    /// *(0xNNN)()
     fn _2nnn(&mut self) {
         self.stack[self.stack_pointer] = self.program_counter;
         self.stack_pointer += 1;
-        self.program_counter = self.get_second_third_fourth_nibbles_inline();
+        self.program_counter = self.current_opcode.get_second_third_fourth_nibbles_inline();
     }
 
-    // Skips the next instruction if VX equals NN.
-    // (Usually the next instruction is a jump to skip a code block)
-    // if (Vx == NN)
+    /// Skips the next instruction if VX equals NN.
+    /// (Usually the next instruction is a jump to skip a code block)
+    /// if (vx == NN)
     fn _3xnn(&mut self) {
-        if self.get_vx() == self.get_third_and_fourth_nibbles_inline() {
+        if self.get_vx() == self.current_opcode.get_third_and_fourth_nibbles_inline() {
             self.skip_next_instruction();
         }
     }
 
-    // Skips the next instruction if VX does not equal NN.
-    // (Usually the next instruction is a jump to skip a code block);
-    // if (Vx != NN)
+    /// Skips the next instruction if VX does not equal NN.
+    /// (Usually the next instruction is a jump to skip a code block);
+    /// if (vx != NN)
     fn _4xnn(&mut self) {
-        if self.get_vx() != self.get_third_and_fourth_nibbles_inline() {
+        if self.get_vx() != self.current_opcode.get_third_and_fourth_nibbles_inline() {
             self.skip_next_instruction();
         }
     }
 
-    // Skips the next instruction if VX equals VY.
-    // (Usually the next instruction is a jump to skip a code block).
-    // if (Vx == Vy)
+    /// Skips the next instruction if VX equals VY.
+    /// (Usually the next instruction is a jump to skip a code block).
+    /// if (vx == vy)
     fn _5xy0(&mut self) {
         if self.get_vx() == self.get_vy() {
             self.skip_next_instruction();
         }
     }
 
-    // Sets VX to NN.
-    // Vx = N
+    /// Sets VX to NN.
+    /// vx = N
     fn _6xnn(&mut self) {
         self.registers[self.current_opcode.second_nibble as usize] =
-            self.get_third_and_fourth_nibbles_inline();
+            self.current_opcode.get_third_and_fourth_nibbles_inline();
     }
 
-    // Adds NN to VX. (Carry flag is not changed);
-    // Vx += NN
+    /// Adds NN to VX. (Carry flag is not changed);
+    /// vx += NN
     fn _7xnn(&mut self) {
         self.registers[self.current_opcode.second_nibble as usize] +=
-            self.get_third_and_fourth_nibbles_inline();
+            self.current_opcode.get_third_and_fourth_nibbles_inline();
     }
 
-    // Sets VX to the value of VY.
-    // Vx = Vy
+    /// Sets VX to the value of VY.
+    /// vx = vy
     fn _8xy0(&mut self) {
         self.registers[self.current_opcode.second_nibble as usize] = self.get_vy();
     }
 
-    // Sets VX to VX or VY. (Bitwise OR operation).
-    // Vx |= Vy
+    /// Sets VX to VX or VY. (Bitwise OR operation).
+    /// vx |= vy
     fn _8xy1(&mut self) {
         self.registers[self.current_opcode.second_nibble as usize] |= self.get_vy();
     }
 
-    // Sets VX to VX and VY. (Bitwise AND operation).
-    // Vx &= Vy
+    /// Sets VX to VX and VY. (Bitwise AND operation).
+    /// vx &= vy
     fn _8xy2(&mut self) {
         self.registers[self.current_opcode.second_nibble as usize] &= self.get_vy();
     }
 
-    // Sets VX to VX xor VY.
-    // Vx ^= Vy
+    /// Sets VX to VX xor VY.
+    /// vx ^= vy
     fn _8xy3(&mut self) {
         self.registers[self.current_opcode.second_nibble as usize] ^= self.get_vy();
     }
 
-    // Adds VY to VX. VF is set to 1 when there's a carry,
-    // and to 0 when there is not.
-    // Vx += Vy
+    /// Adds VY to VX. VF is set to 1 when there's a carry,
+    /// and to 0 when there is not.
+    /// vx += vy
     fn _8xy4(&mut self) {
         let sum = (self.get_vx() + self.get_vy()) as u16;
         if sum > 255 {
@@ -265,9 +297,9 @@ impl Emulator {
         self.registers[self.current_opcode.second_nibble as usize] += self.get_vy();
     }
 
-    // VY is subtracted from VX. VF is set to 0 when there's a borrow,
-    // and 1 when there is not.
-    // Vx -= Vy
+    /// VY is subtracted from VX. VF is set to 0 when there's a borrow,
+    /// and 1 when there is not.
+    /// vx -= vy
     fn _8xy5(&mut self) {
         let substraction = (self.get_vx() - self.get_vy()) as i8;
         if substraction < 0 {
@@ -278,17 +310,17 @@ impl Emulator {
         self.registers[self.current_opcode.second_nibble as usize] = substraction as u8;
     }
 
-    // Stores the least significant bit of VX in VF and then shifts
-    // VX to the right by 1.
-    // Vx >>= 1
+    /// Stores the least significant bit of VX in VF and then shifts
+    /// VX to the right by 1.
+    /// vx >>= 1
     fn _8xy6(&mut self) {
         self.registers[15] = 00000001u8 & self.get_vx();
         self.registers[self.current_opcode.second_nibble as usize] >>= 1;
     }
 
-    // Sets VX to VY minus VX. VF is set to 0 when there's a borrow,
-    // and 1 when there is not.
-    // Vx = Vy - Vx
+    /// Sets VX to VY minus VX. VF is set to 0 when there's a borrow,
+    /// and 1 when there is not.
+    /// vx = vy - vx
     fn _8xy7(&mut self) {
         let substraction = (self.get_vy() - self.get_vx()) as i8;
         if substraction < 0 {
@@ -300,50 +332,50 @@ impl Emulator {
         }
     }
 
-    // Stores the most significant bit of VX in VF
-    // and then shifts VX to the left by 1.
-    // Vx <<= 1
+    /// Stores the most significant bit of VX in VF
+    /// and then shifts VX to the left by 1.
+    /// vx <<= 1
     fn _8xye(&mut self) {
         self.registers[15] = 128 & self.get_vx();
         self.registers[self.current_opcode.second_nibble as usize] <<= 1;
     }
 
-    // Skips the next instruction if VX does not equal VY.
-    // (Usually the next instruction is a jump to skip a code block)
-    // if (Vx != Vy)
+    /// Skips the next instruction if VX does not equal VY.
+    /// (Usually the next instruction is a jump to skip a code block)
+    /// if (vx != vy)
     fn _9xy0(&mut self) {
         if self.get_vx() != self.get_vy() {
             self.skip_next_instruction();
         }
     }
 
-    // Sets I to the address NNN.
-    // I = NNN
+    /// Sets I to the address NNN.
+    /// I = NNN
     fn annn(&mut self) {
-        self.index_register = self.get_second_third_fourth_nibbles_inline();
+        self.index_register = self.current_opcode.get_second_third_fourth_nibbles_inline();
     }
 
-    // Jumps to the address NNN plus V0.
-    // PC = V0 + NNN
+    /// Jumps to the address NNN plus V0.
+    /// PC = V0 + NNN
     fn bnnn(&mut self) {
         self.program_counter =
-            self.registers[0] as u16 + self.get_second_third_fourth_nibbles_inline();
+            self.registers[0] as u16 + self.current_opcode.get_second_third_fourth_nibbles_inline();
     }
 
-    // Sets VX to the result of a bitwise and operation on a random number
-    // (Typically: 0 to 255) and NN. Vx = rand() & NN
+    /// Sets VX to the result of a bitwise and operation on a random number
+    /// (Typically: 0 to 255) and NN. vx = rand() & NN
     fn cxnn(&mut self) {
         self.registers[self.current_opcode.second_nibble as usize] =
-            ((random() * 255.0) as u8) & self.get_third_and_fourth_nibbles_inline();
+            ((random() * 255.0) as u8) & self.current_opcode.get_third_and_fourth_nibbles_inline();
     }
 
-    // Draws a sprite at coordinate (VX, VY) that has a width of 8 pixels and
-    // a height of N pixels. Each row of 8 pixels is read as bit-coded starting
-    // from memory location I; I value does not change after the execution of
-    // this instruction. As described above, VF is set to 1 if any screen pixels
-    // are flipped from set to unset when the sprite is drawn, and to 0 if that
-    // does not happen
-    // draw(Vx, Vy, N)
+    /// Draws a sprite at coordinate (VX, VY) that has a width of 8 pixels and
+    /// a height of N pixels. Each row of 8 pixels is read as bit-coded starting
+    /// from memory location I; I value does not change after the execution of
+    /// this instruction. As described above, VF is set to 1 if any screen pixels
+    /// are flipped from set to unset when the sprite is drawn, and to 0 if that
+    /// does not happen
+    /// draw(vx, vy, N)
     fn dxyn(&mut self) {
         let height = self.current_opcode.fourth_nibble;
         let x = self.get_vx();
@@ -372,33 +404,33 @@ impl Emulator {
         }
     }
 
-    // Skips the next instruction if the key stored in VX is pressed.
-    // (Usually the next instruction is a jump to skip a code block);
-    // if (key() == Vx)
+    /// Skips the next instruction if the key stored in VX is pressed.
+    /// (Usually the next instruction is a jump to skip a code block);
+    /// if (key() == vx)
     fn ex9e(&mut self) {
         if self.keypad[self.get_vx() as usize] {
             self.skip_next_instruction();
         }
     }
 
-    // Skips the next instruction if the key stored in VX is not pressed.
-    // (Usually the next instruction is a jump to skip a code block).
-    // if (key() != Vx)
+    /// Skips the next instruction if the key stored in VX is not pressed.
+    /// (Usually the next instruction is a jump to skip a code block).
+    /// if (key() != vx)
     fn exa1(&mut self) {
         if !self.keypad[self.get_vx() as usize] {
             self.skip_next_instruction();
         }
     }
 
-    // Sets VX to the value of the delay timer.
-    // Vx = get_delay()
+    /// Sets VX to the value of the delay timer.
+    /// vx = get_delay()
     fn fx07(&mut self) {
         self.registers[self.current_opcode.second_nibble as usize] = self.delay_timer;
     }
 
-    // A key press is awaited, and then stored in VX. (Blocking Operation).
-    // All instruction halted until next key event);
-    // Vx = get_key()
+    /// A key press is awaited, and then stored in VX. (Blocking Operation).
+    /// All instruction halted until next key event);
+    /// vx = get_key()
     fn fx0a(&mut self) {
         self.program_counter -= 2;
         if self.keypad[self.get_vx() as usize] == true {
@@ -407,61 +439,61 @@ impl Emulator {
         }
     }
 
-    // Sets the delay timer to VX.
-    // delay_timer(Vx)
+    /// Sets the delay timer to VX.
+    /// delay_timer(vx)
     fn fx15(&mut self) {
         self.delay_timer = self.get_vx();
     }
 
-    // Sets the sound timer to VX.
-    // sound_timer(Vx)
+    /// Sets the sound timer to VX.
+    /// sound_timer(vx)
     fn fx18(&mut self) {
         self.sound_timer = self.get_vx();
     }
 
-    // Adds VX to I. VF is not affected.
-    // I += Vx
+    /// Adds VX to I. VF is not affected.
+    /// I += vx
     fn fx1e(&mut self) {
         self.index_register += self.get_vx() as u16;
     }
 
-    // Sets I to the location of the sprite for the character in VX.
-    // Characters 0-F (in hexadecimal) are represented by a 4x5 font.
-    // I = sprite_addr[Vx]
+    /// Sets I to the location of the sprite for the character in VX.
+    /// Characters 0-F (in hexadecimal) are represented by a 4x5 font.
+    /// I = sprite_addr[vx]
     fn fx29(&mut self) {
         self.index_register = self.get_vx() as u16 * 5;
     }
 
-    // Stores the binary-coded decimal representation of VX, with the most
-    // significant of three digits at the address in I, the middle digit at I
-    // plus 1, and the least significant digit at I plus 2. (In other words, take
-    // the decimal representation of VX, place the hundreds digit in memory at
-    // location in I, the tens digit at location I+1, and the ones digit at
-    // location I+2.).
-    // set_BCD(Vx)
-    // *(I+0) = BCD(3);
-    // *(I+1) = BCD(2);
-    // *(I+2) = BCD(1);
+    /// Stores the binary-coded decimal representation of VX, with the most
+    /// significant of three digits at the address in I, the middle digit at I
+    /// plus 1, and the least significant digit at I plus 2. (In other words, take
+    /// the decimal representation of VX, place the hundreds digit in memory at
+    /// location in I, the tens digit at location I+1, and the ones digit at
+    /// location I+2.).
+    /// set_BCD(vx)
+    /// *(I+0) = BCD(3);
+    /// *(I+1) = BCD(2);
+    /// *(I+2) = BCD(1);
     fn fx33(&mut self) {
         self.memory[self.index_register as usize] = self.get_vx() / 100;
         self.memory[self.index_register as usize + 1] = (self.get_vx() / 10) % 10;
         self.memory[self.index_register as usize + 2] = self.get_vx() % 10;
     }
 
-    // Stores from V0 to VX (including VX) in memory, starting at address I.
-    // The offset from I is increased by 1 for each value written, but I
-    // itself is left unmodified
-    // reg_dump(Vx, &I)
+    /// Stores from V0 to VX (including VX) in memory, starting at address I.
+    /// The offset from I is increased by 1 for each value written, but I
+    /// itself is left unmodified
+    /// reg_dump(vx, &I)
     fn fx55(&mut self) {
         for i in 0..self.current_opcode.second_nibble + 1 {
             self.memory[(self.index_register + i as u16) as usize] = self.registers[i as usize];
         }
     }
 
-    // Fills from V0 to VX (including VX) with values from memory, starting at
-    // address I. The offset from I is increased by 1 for each value written,
-    // but I itself is left unmodified.
-    // reg_load(Vx, &I)
+    /// Fills from V0 to VX (including VX) with values from memory, starting at
+    /// address I. The offset from I is increased by 1 for each value written,
+    /// but I itself is left unmodified.
+    /// reg_load(vx, &I)
     fn fx65(&mut self) {
         for i in 0..self.current_opcode.second_nibble + 1 {
             self.registers[i as usize] = self.memory[(self.index_register + i as u16) as usize];
@@ -469,21 +501,14 @@ impl Emulator {
     }
 
     pub fn cycle(&mut self) {
-        let opcode = self.fetch_opcode();
+        self.fetch_opcode();
 
-        self.process_opcode(opcode);
+        self.process_opcode();
 
         self.update_timers();
     }
 
-    pub fn process_opcode(&mut self, opcode: u16) {
-        self.current_opcode = OpCode {
-            first_nibble: ((opcode & 0xF000) >> 12) as u8,
-            second_nibble: ((opcode & 0x0F00) >> 8) as u8,
-            third_nibble: ((opcode & 0x00F0) >> 4) as u8,
-            fourth_nibble: (opcode & 0x000F) as u8,
-        };
-
+    pub fn process_opcode(&mut self) {
         self.program_counter += 2;
 
         match (
@@ -544,7 +569,7 @@ impl Emulator {
     }
 }
 
-// Display trait to print Emulator state next to the screen
+/// Display trait to print `Emulator` state next to the screen in the browser.
 impl fmt::Display for Emulator {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
@@ -620,7 +645,7 @@ impl fmt::Display for Emulator {
     }
 }
 
-// returns an array of booleans according to a byte's bits
+/// Returns an array of booleans according to a byte's bits.
 fn u8_to_bools(byte: u8) -> [bool; 8] {
     [
         0b10000000 & byte == 0b10000000,

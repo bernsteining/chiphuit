@@ -14,6 +14,8 @@ pub fn request_animation_frame(f: &Closure<dyn FnMut()>) -> i32 {
         .expect("should register `requestAnimationFrame` OK")
 }
 
+/// Set the canvas in the browser that will be be used to render the chip8
+/// Emulator screen.
 pub fn set_canvas(document: &web_sys::Document) -> web_sys::CanvasRenderingContext2d {
     let canvas: web_sys::HtmlCanvasElement = document
         .create_element("canvas")
@@ -38,6 +40,8 @@ pub fn set_canvas(document: &web_sys::Document) -> web_sys::CanvasRenderingConte
     canvas
 }
 
+/// Render the Emulator state in the browser to inspect its fields values at
+/// runtime..
 pub fn set_emulator_state(document: &web_sys::Document) -> web_sys::Element {
     let emulator_state = document
         .create_element("div")
@@ -57,6 +61,7 @@ pub fn set_emulator_state(document: &web_sys::Document) -> web_sys::Element {
     emulator_state
 }
 
+/// Render the chip8 Emulator screen in the browser using the Canvas API.
 pub fn draw_screen(context: &CanvasRenderingContext2d, boolean_screen: [bool; 64 * 32]) {
     let mut graphic_screen = [0; 64 * 32 * 4];
     for (i, x) in boolean_screen.iter().enumerate() {

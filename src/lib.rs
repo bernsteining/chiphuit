@@ -1,7 +1,6 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
-use wasm_bindgen::JsCast;
 
 mod cpu;
 mod graphics;
@@ -11,9 +10,12 @@ mod utils;
 // allocator.
 #[cfg(feature = "wee_alloc")]
 #[global_allocator]
+
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 #[wasm_bindgen(start)]
+/// Main function that initializes the emulator, the keypad, and the screen
+/// before inserting the ROM in the Emulator to play.
 pub fn main() -> Result<(), JsValue> {
     let document = web_sys::window()
         .unwrap()
@@ -50,7 +52,7 @@ pub fn main() -> Result<(), JsValue> {
 
     // EVENT LOOP
     *g.borrow_mut() = Some(Closure::wrap(Box::new(move || {
-        set_timeout(t1.borrow().as_ref().unwrap(), 20);
+        utils::set_timeout(t1.borrow().as_ref().unwrap(), 20);
 
         emulator.keypad = *k2.borrow_mut();
         emulator.running = *b2.borrow_mut();
@@ -74,14 +76,4 @@ pub fn main() -> Result<(), JsValue> {
     graphics::request_animation_frame(g.borrow().as_ref().unwrap());
 
     Ok(())
-}
-
-fn set_timeout(f: &Closure<dyn FnMut()>, timeout_ms: i32) -> i32 {
-    web_sys::window()
-        .expect("should have a window.")
-        .set_timeout_with_callback_and_timeout_and_arguments_0(
-            f.as_ref().unchecked_ref(),
-            timeout_ms,
-        )
-        .expect("should register `setTimeout` OK")
 }
