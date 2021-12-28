@@ -4,7 +4,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{console, Event, File, FileList, FileReader, HtmlInputElement, Node};
+use web_sys::{console, Event, FileReader, HtmlInputElement, Node};
 
 pub fn set_keypad(document: &web_sys::Document, k: &Rc<RefCell<[bool; 16]>>) {
     let keypad = document

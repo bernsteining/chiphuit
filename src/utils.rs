@@ -1,5 +1,3 @@
-use wasm_bindgen::prelude::*;
-
 pub fn append_to_body(element: &web_sys::Node) {
     web_sys::window()
         .unwrap()
