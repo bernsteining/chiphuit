@@ -1,3 +1,4 @@
+use crate::utils::append_to_body;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::Clamped;
 use wasm_bindgen::JsCast;
@@ -25,11 +26,7 @@ pub fn set_canvas(document: &web_sys::Document) -> web_sys::CanvasRenderingConte
     canvas.set_width(64);
     canvas.set_height(32);
 
-    document
-        .body()
-        .expect("document should have a body")
-        .append_child(&canvas)
-        .unwrap();
+    append_to_body(&canvas);
 
     let canvas = canvas
         .get_context("2d")
@@ -54,6 +51,8 @@ pub fn set_emulator_state(document: &web_sys::Document) -> web_sys::Element {
         .expect("document should have a body")
         .append_child(&emulator_state)
         .unwrap();
+
+    append_to_body(&emulator_state);
 
     emulator_state
 }
