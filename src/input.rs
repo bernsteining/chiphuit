@@ -1,4 +1,4 @@
-use crate::utils::append_to_body;
+use crate::utils::{append_to_body, document};
 use js_sys::JsString;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -6,8 +6,8 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{console, Event, FileReader, HtmlInputElement, Node};
 
-pub fn set_keypad(document: &web_sys::Document, k: &Rc<RefCell<[bool; 16]>>) {
-    let keypad = document
+pub fn set_keypad(k: &Rc<RefCell<[bool; 16]>>) {
+    let keypad = document()
         .create_element("keypad")
         .expect("should have a keypad.");
 
@@ -22,7 +22,7 @@ pub fn set_keypad(document: &web_sys::Document, k: &Rc<RefCell<[bool; 16]>>) {
     .iter()
     .enumerate()
     {
-        let keypad_key = document.create_element("div").unwrap();
+        let keypad_key = document().create_element("div").unwrap();
         keypad_key.set_id(key);
         keypad_key.set_inner_html(key);
         keypad_key.set_class_name("key");
@@ -43,8 +43,8 @@ pub fn set_keypad(document: &web_sys::Document, k: &Rc<RefCell<[bool; 16]>>) {
     }
 }
 
-pub fn set_breakpoint(document: &web_sys::Document, b: &Rc<RefCell<bool>>) {
-    let breakpoint = document
+pub fn set_breakpoint(b: &Rc<RefCell<bool>>) {
+    let breakpoint = document()
         .create_element("breakpoint")
         .expect("should have a breakpoint.");
 
@@ -79,7 +79,7 @@ pub fn set_breakpoint(document: &web_sys::Document, b: &Rc<RefCell<bool>>) {
     closure.forget()
 }
 
-pub fn get_file_reader(document: &web_sys::Document, v: &Rc<RefCell<Vec<u8>>>) {
+pub fn get_file_reader(v: &Rc<RefCell<Vec<u8>>>) {
     let filereader = FileReader::new().unwrap().dyn_into::<FileReader>().unwrap();
     let v1 = Rc::clone(&v);
     let onload = Closure::wrap(Box::new(move |event: Event| {
@@ -94,7 +94,7 @@ pub fn get_file_reader(document: &web_sys::Document, v: &Rc<RefCell<Vec<u8>>>) {
     filereader.set_onloadend(Some(onload.as_ref().unchecked_ref()));
     onload.forget();
 
-    let fileinput: HtmlInputElement = document
+    let fileinput: HtmlInputElement = document()
         .create_element("input")
         .unwrap()
         .dyn_into::<HtmlInputElement>()

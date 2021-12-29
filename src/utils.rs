@@ -13,6 +13,14 @@ pub fn append_to_body(element: &web_sys::Node) {
         .unwrap();
 }
 
+// Utile function to get a `web_sys::Document`.
+pub fn document() -> web_sys::Document {
+    web_sys::window()
+        .unwrap()
+        .document()
+        .expect("should have a document.")
+}
+
 // Util function for the event loop.
 pub fn set_timeout(f: &Closure<dyn FnMut()>, timeout_ms: i32) -> i32 {
     web_sys::window()

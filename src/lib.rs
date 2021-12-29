@@ -17,22 +17,17 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 /// Main function that initializes the emulator, the keypad, and the screen
 /// before inserting the ROM in the Emulator to play.
 pub fn main() -> Result<(), JsValue> {
-    let document = web_sys::window()
-        .unwrap()
-        .document()
-        .expect("should have a document.");
+    let context = graphics::set_canvas();
 
-    let context = graphics::set_canvas(&document);
-
-    let emulator_state = graphics::set_emulator_state(&document);
+    let emulator_state = graphics::set_emulator_state();
 
     let k = Rc::new(RefCell::new([false; 16]));
     let b = Rc::new(RefCell::new(false));
     let v = Rc::new(RefCell::new(Vec::new()));
 
-    input::set_keypad(&document, &k);
-    input::set_breakpoint(&document, &b);
-    input::get_file_reader(&document, &v);
+    input::set_keypad(&k);
+    input::set_breakpoint(&b);
+    input::get_file_reader(&v);
 
     let k2 = Rc::clone(&k);
     let b2 = Rc::clone(&b);

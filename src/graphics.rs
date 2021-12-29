@@ -1,4 +1,4 @@
-use crate::utils::append_to_body;
+use crate::utils::{append_to_body, document};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::Clamped;
 use wasm_bindgen::JsCast;
@@ -16,8 +16,8 @@ pub fn request_animation_frame(f: &Closure<dyn FnMut()>) -> i32 {
 
 /// Set the canvas in the browser that will be be used to render the chip8
 /// Emulator screen.
-pub fn set_canvas(document: &web_sys::Document) -> web_sys::CanvasRenderingContext2d {
-    let canvas: web_sys::HtmlCanvasElement = document
+pub fn set_canvas() -> web_sys::CanvasRenderingContext2d {
+    let canvas: web_sys::HtmlCanvasElement = document()
         .create_element("canvas")
         .expect("Should have an element named canvas.")
         .dyn_into::<web_sys::HtmlCanvasElement>()
@@ -42,15 +42,15 @@ pub fn set_canvas(document: &web_sys::Document) -> web_sys::CanvasRenderingConte
 
 /// Render the Emulator state in the browser to inspect its fields values at
 /// runtime..
-pub fn set_emulator_state(document: &web_sys::Document) -> web_sys::Element {
-    let emulator_state = document
+pub fn set_emulator_state() -> web_sys::Element {
+    let emulator_state = document()
         .create_element("div")
         .expect("should have an emulator state in top right corner.");
 
     emulator_state.set_id("emulator_state");
     emulator_state.set_class_name("emulator_state");
 
-    document
+    document()
         .body()
         .expect("document should have a body")
         .append_child(&emulator_state)
