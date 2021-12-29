@@ -27,7 +27,7 @@ pub fn main() -> Result<(), JsValue> {
 
     input::set_keypad(&k);
     input::set_breakpoint(&b);
-    input::set_file_reader(&v);
+    input::set_file_reader(&rom_buffer);
 
     let k2 = Rc::clone(&k);
     let b2 = Rc::clone(&b);
