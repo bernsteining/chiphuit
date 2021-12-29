@@ -38,8 +38,8 @@ impl OpCode {
         return self.third_nibble << 4 | self.fourth_nibble;
     }
 
-    /// Util function to read the 1st and 2nd nibbles of the opcode in a single
-    /// u8.
+    /// Util function to read the 2nd, 3rd and 4th nibbles of the opcode
+    /// in a single u16.
     fn get_second_third_fourth_nibbles_inline(&mut self) -> u16 {
         ((self.second_nibble as u16) << 8
             | (self.third_nibble as u16) << 4
