@@ -23,15 +23,15 @@ pub fn main() -> Result<(), JsValue> {
 
     let k = Rc::new(RefCell::new([false; 16]));
     let b = Rc::new(RefCell::new(false));
-    let v = Rc::new(RefCell::new(Vec::new()));
+    let rom_buffer = Rc::new(RefCell::new(Vec::new()));
 
     input::set_keypad(&k);
     input::set_breakpoint(&b);
-    input::get_file_reader(&v);
+    input::set_file_reader(&v);
 
     let k2 = Rc::clone(&k);
     let b2 = Rc::clone(&b);
-    let game = Rc::clone(&v);
+    let rom = Rc::clone(&rom_buffer);
 
     let f = Rc::new(RefCell::new(None));
     let g = f.clone();
@@ -52,9 +52,9 @@ pub fn main() -> Result<(), JsValue> {
         emulator.keypad = *k2.borrow_mut();
         emulator.running = *b2.borrow_mut();
 
-        if !game.borrow().is_empty() {
-            emulator.hotswap(game.borrow().clone());
-            game.borrow_mut().clear();
+        if !rom.borrow().is_empty() {
+            emulator.hotswap(rom.borrow().clone());
+            rom.borrow_mut().clear();
         }
 
         if emulator.running {

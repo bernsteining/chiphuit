@@ -4,7 +4,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{console, Event, FileReader, HtmlInputElement, Node};
+use web_sys::{console, Event, FileReader, HtmlInputElement, HtmlLabelElement, Node};
 
 pub fn set_keypad(k: &Rc<RefCell<[bool; 16]>>) {
     let keypad = document()
@@ -59,10 +59,7 @@ pub fn set_breakpoint(b: &Rc<RefCell<bool>>) {
     let closure = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
         *b1.borrow_mut() ^= true;
 
-        let _breakpoint = web_sys::window()
-            .unwrap()
-            .document()
-            .expect("should have a document.")
+        let _breakpoint = document()
             .get_element_by_id("breakpoint")
             .expect("should have a breakpoint.");
         let button_content = _breakpoint.inner_html();
@@ -79,15 +76,15 @@ pub fn set_breakpoint(b: &Rc<RefCell<bool>>) {
     closure.forget()
 }
 
-pub fn get_file_reader(v: &Rc<RefCell<Vec<u8>>>) {
+pub fn set_file_reader(rom_buffer: &Rc<RefCell<Vec<u8>>>) {
     let filereader = FileReader::new().unwrap().dyn_into::<FileReader>().unwrap();
-    let v1 = Rc::clone(&v);
+    let rom = Rc::clone(&rom_buffer);
     let onload = Closure::wrap(Box::new(move |event: Event| {
         let element = event.target().unwrap().dyn_into::<FileReader>().unwrap();
         let data = element.result().unwrap();
         let game_string: JsString = data.dyn_into::<JsString>().unwrap();
         let game_vec: Vec<u8> = game_string.iter().map(|x| x as u8).collect();
-        *v1.borrow_mut() = game_vec.clone();
+        *rom.borrow_mut() = game_vec.clone();
         console::log_1(&format!("game loaded: {:?}", game_string).into());
     }) as Box<dyn FnMut(_)>);
 
@@ -103,6 +100,17 @@ pub fn get_file_reader(v: &Rc<RefCell<Vec<u8>>>) {
     fileinput.set_id("file-upload");
     fileinput.set_type("file");
 
+    let label: HtmlLabelElement = document()
+        .create_element("label")
+        .unwrap()
+        .dyn_into::<HtmlLabelElement>()
+        .unwrap();
+
+    label.set_html_for("file-upload");
+    label.set_inner_text("Choose chip8 ROM");
+    label.set_class_name("file-upload");
+
+    append_to_body(&label);
     append_to_body(&fileinput);
 
     let callback = Closure::wrap(Box::new(move |event: Event| {
