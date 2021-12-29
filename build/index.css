@@ -137,4 +137,5 @@ input[type="file"] {
   position: fixed;
   top: 0;
   right: 0;
+  font-size: small;
 }

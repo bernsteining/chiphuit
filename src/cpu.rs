@@ -631,15 +631,6 @@ impl fmt::Display for Emulator {
                 .collect::<String>()
         );
 
-        write!(
-            f,
-            "<tr><td>keypad</td> <td>{}<td></tr>",
-            self.keypad
-                .iter()
-                .map(|&x| format!("{},", x))
-                .collect::<String>()
-        );
-
         write!(f, "<tr><td>running</td> <td>{:?}<td></tr>", self.running);
         write!(f, "</table>",)
     }
