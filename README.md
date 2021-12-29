@@ -26,6 +26,8 @@ Then play on localhost @ port 4000.
 
 [Some chip8 games to download](https://github.com/kripod/chip8-roms/tree/master/games)
 
+The emulator is hosted online [here](https://chiphuit.glitch.me/) if you want to give it a try without building from sources.
+
 ## Todolist
 
 ### soon
