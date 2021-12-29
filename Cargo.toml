@@ -41,7 +41,8 @@ features = [
   'FileReader',
   'File',
   'FileList',
-  'HtmlInputElement']
+  'HtmlInputElement',
+  'HtmlLabelElement']
 
 [dev-dependencies]
 wasm-bindgen-test = "0.2"

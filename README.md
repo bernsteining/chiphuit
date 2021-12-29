@@ -14,6 +14,18 @@ useful links that helped me / motivated me a lot:
 
 [Awesome chip8 rom to test opcodes](https://github.com/corax89/chip8-test-rom)
 
+# usage
+
+Build & serve from source
+
+```
+./build.sh
+```
+
+Then play on localhost @ port 4000.
+
+[Some chip8 games to download](https://github.com/kripod/chip8-roms/tree/master/games)
+
 ## Todolist
 
 ### soon
@@ -30,5 +42,6 @@ useful links that helped me / motivated me a lot:
 - factorize emulator state rendering
 - add beep sound with web_sys::{AudioContext, OscillatorType};
 - allow tracing opcodes
-- responsive CSS, especially for the ROM choice button mdr
+- responsive CSS
+- add error handling to code instead of all the wild unwraps
 - set FPS / emulator speed during runtime

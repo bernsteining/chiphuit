@@ -20,59 +20,6 @@ canvas {
   image-rendering: crisp-edges;
 }
 
-/*file-upload*/
-.file-upload {
-  position: relative;
-  background-color: darkmagenta;
-  border-radius: 8%;
-  display: block;
-  position: float;
-  width: 105px;
-  text-align: center;
-  margin-top: -60px;
-
-  -webkit-transition-duration: 0.4s; /* Safari */
-  transition-duration: 0.4s;
-  text-decoration: none;
-  overflow: hidden;
-}
-
-.file-upload:hover {
-  background: #fff;
-  box-shadow: 0px 2px 10px 5px #97b1bf;
-  color: #000;
-}
-
-.file-upload:after {
-  content: "";
-  background: darkmagenta;
-  display: block;
-  position: absolute;
-  padding-top: 300%;
-  padding-left: 350%;
-  margin-left: -20px !important;
-  margin-top: -120%;
-  opacity: 0;
-  transition: all 0.8s;
-}
-
-.file-upload:active:after {
-  padding: 0;
-  margin: 0;
-  opacity: 1;
-  transition: 0s;
-}
-
-input[type="file"] {
-  display: none;
-}
-.file-upload {
-  border: 1px solid #ccc;
-  display: inline-block;
-  padding: 6px 12px;
-  cursor: pointer;
-}
-
 /* When moving the mouse over the close custom-file-upload */
 .closebtn:hover {
   color: black;
@@ -113,21 +60,12 @@ input[type="file"] {
   background-color: rgb(243, 243, 243);
 }
 
-.emulator_state {
-  text-align: justify;
-  max-width: min-content;
-  position: fixed;
-  top: 0;
-  right: 0;
-}
-
 .breakpoint {
   background-color: darkmagenta;
   border: 2px solid black;
   border-radius: 5px;
   font-size: 20px;
   text-align: center;
-  max-width: min-content;
   position: flex;
   display: inline-block;
   padding: 0px;
@@ -136,9 +74,67 @@ input[type="file"] {
   padding-right: 10px;
   padding-left: 10px;
   cursor: pointer;
+  grid-row: 5;
+  grid-column: 1/5;
 }
 
 .breakpoint:hover {
   border: 1px solid #eeeeee;
   background-color: rgb(243, 243, 243);
+}
+
+/*file-upload*/
+.file-upload {
+  background-color: darkmagenta;
+  border: 2px solid black;
+  border-radius: 5px;
+  border-color: #eeeeee;
+  display: flex;
+  text-align: center;
+
+  -webkit-transition-duration: 0.4s; /* Safari */
+  transition-duration: 0.4s;
+  text-decoration: none;
+  overflow: hidden;
+}
+
+.file-upload:hover {
+  background: #fff;
+  box-shadow: 0px 2px 10px 5px #97b1bf;
+  color: #000;
+}
+
+.file-upload:after {
+  background: darkmagenta;
+  display: block;
+  position: absolute;
+  opacity: 0;
+  transition: all 0.8s;
+}
+
+.file-upload:active:after {
+  padding: 0;
+  margin: 0;
+  opacity: 1;
+  transition: 0s;
+}
+
+input[type="file"] {
+  display: none;
+}
+.file-upload {
+  border: 2px solid black;
+  display: inline-block;
+  padding: 6px 12px;
+  grid-column: 5 / span 4;
+  grid-row: 5;
+  cursor: pointer;
+}
+
+.emulator_state {
+  text-align: justify;
+  max-width: min-content;
+  position: fixed;
+  top: 0;
+  right: 0;
 }

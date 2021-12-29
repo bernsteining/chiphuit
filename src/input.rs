@@ -1,4 +1,4 @@
-use crate::utils::{append_to_body, document};
+use crate::utils::{append_element_to_another, append_to_body, document};
 use js_sys::JsString;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -11,7 +11,7 @@ pub fn set_keypad(k: &Rc<RefCell<[bool; 16]>>) {
         .create_element("keypad")
         .expect("should have a keypad.");
 
-    keypad.set_id("id");
+    keypad.set_id("keypad");
     keypad.set_class_name("keypad-base");
 
     append_to_body(&keypad);
@@ -52,7 +52,7 @@ pub fn set_breakpoint(b: &Rc<RefCell<bool>>) {
     breakpoint.set_class_name("breakpoint");
     breakpoint.set_inner_html("play");
 
-    append_to_body(&breakpoint);
+    append_element_to_another(&breakpoint, "keypad");
 
     let b1 = Rc::clone(&b);
 
@@ -110,7 +110,7 @@ pub fn set_file_reader(rom_buffer: &Rc<RefCell<Vec<u8>>>) {
     label.set_inner_text("Choose chip8 ROM");
     label.set_class_name("file-upload");
 
-    append_to_body(&label);
+    append_element_to_another(&label, "keypad");
     append_to_body(&fileinput);
 
     let callback = Closure::wrap(Box::new(move |event: Event| {

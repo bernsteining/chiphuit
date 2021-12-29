@@ -13,6 +13,16 @@ pub fn append_to_body(element: &web_sys::Node) {
         .unwrap();
 }
 
+// Util function to append a `web_sys::Node` to an HTML element selected by
+// its id
+pub fn append_element_to_another(element: &web_sys::Node, id: &str) {
+    document()
+        .get_element_by_id(id)
+        .unwrap()
+        .append_child(&element)
+        .unwrap();
+}
+
 // Utile function to get a `web_sys::Document`.
 pub fn document() -> web_sys::Document {
     web_sys::window()
