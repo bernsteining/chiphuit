@@ -1,7 +1,7 @@
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
-// Util function to append a `web_sys::Node` to the body.
+/// Util function to append a `web_sys::Node` to the body.
 pub fn append_to_body(element: &web_sys::Node) {
     web_sys::window()
         .unwrap()
@@ -13,8 +13,8 @@ pub fn append_to_body(element: &web_sys::Node) {
         .unwrap();
 }
 
-// Util function to append a `web_sys::Node` to an HTML element selected by
-// its id
+/// Util function to append a `web_sys::Node` to an HTML element selected by
+/// its id
 pub fn append_element_to_another(element: &web_sys::Node, id: &str) {
     document()
         .get_element_by_id(id)
@@ -23,7 +23,7 @@ pub fn append_element_to_another(element: &web_sys::Node, id: &str) {
         .unwrap();
 }
 
-// Utile function to get a `web_sys::Document`.
+/// Util function to get a `web_sys::Document`.
 pub fn document() -> web_sys::Document {
     web_sys::window()
         .unwrap()
@@ -31,7 +31,7 @@ pub fn document() -> web_sys::Document {
         .expect("should have a document.")
 }
 
-// Util function for the event loop.
+/// Util function for the event loop.
 pub fn set_timeout(f: &Closure<dyn FnMut()>, timeout_ms: i32) -> i32 {
     web_sys::window()
         .expect("should have a window.")

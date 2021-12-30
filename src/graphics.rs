@@ -25,8 +25,8 @@ pub fn set_canvas() -> web_sys::CanvasRenderingContext2d {
 
     canvas.set_id("canvas");
 
-    canvas.set_width(64);
-    canvas.set_height(32);
+    canvas.set_width(WIDTH);
+    canvas.set_height(HEIGHT);
 
     append_to_body(&canvas);
 
