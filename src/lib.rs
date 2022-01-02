@@ -1,3 +1,28 @@
+//! # chiphuit
+//!
+//! The `chiphuit` crate provides a [Chip8](https://en.wikipedia.org/wiki/CHIP-8)
+//! emulator able to run in any web browser capable of executing WASM.
+//!
+//!
+//! ## Rendering
+//!
+//! `chiphuit` uses the [Canvas API](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API)
+//! to render the emulator's screen.
+//!
+//! ## Features
+//!
+//! - `chiphuit` runs the ROM supplied by the user through the UI , and allows
+//! hotswapping the ROM at runtime.
+//!
+//! - `chiphuit` also has a breakpoint feature that allows the user to pause
+//! the `Emulator` at any time.
+//!
+//! - `chiphuit` displays the `Emulator` variables next to the screen in order
+//! to see its state at runtime.
+//!
+//! - `chiphuit` provides 2 ways to handle user input: A player can click the
+//! virtual keypad on the UI to play, or use its own keyboard.
+
 use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
@@ -6,6 +31,7 @@ mod cpu;
 mod graphics;
 mod input;
 mod utils;
+
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
 #[cfg(feature = "wee_alloc")]
@@ -13,10 +39,10 @@ mod utils;
 
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-#[wasm_bindgen(start)]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen(start))]
 /// Main function that initializes the emulator, the keypad, and the screen
 /// before inserting the ROM in the Emulator to play.
-pub fn main() -> Result<(), JsValue> {
+pub fn main_wasm() -> Result<(), JsValue> {
     let context = graphics::set_canvas();
 
     let emulator_state = graphics::set_emulator_state();
