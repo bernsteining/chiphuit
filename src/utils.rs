@@ -1,3 +1,5 @@
+//! # A module to avoid re-writing `wasm-bindgen` functions.
+
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 

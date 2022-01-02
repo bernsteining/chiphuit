@@ -1,3 +1,4 @@
+//! # A module to display the screen of our `Emulator` with the [Canvas API](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API).
 use crate::utils::{append_to_body, document};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::Clamped;
@@ -62,6 +63,23 @@ pub fn set_emulator_state() -> web_sys::Element {
 }
 
 /// Render the chip8 Emulator screen in the browser using the Canvas API.
+///
+/// Since every pixel of a chip8 `Emulator` screen (64x32)
+/// has only 2 possible values (turned off or turned on), these are represented
+/// in memory by bools. This function iterates over the pixel states of the
+/// `Emulator` and draws pixels on the Canvas.
+///
+/// # Examples
+///
+/// Basic usage:
+///
+/// ```
+/// let context = set_canvas();
+/// let boolean_screen = [true, 64 * 32];
+///
+/// // turns all the pixels of the Emulator screen on.
+/// draw_screen(context, boolean_screen);
+/// ```
 pub fn draw_screen(context: &CanvasRenderingContext2d, boolean_screen: [bool; 64 * 32]) {
     let mut graphic_screen = [0; 64 * 32 * 4];
     for (i, x) in boolean_screen.iter().enumerate() {

@@ -1,3 +1,7 @@
+//! # A module to set and bind every element used for user input.
+//! - The keypad
+//! - The breakpoint
+//! - The file input to handle the ROM
 use crate::utils::{append_element_to_another, append_to_body, document};
 use js_sys::JsString;
 use std::cell::RefCell;
@@ -6,6 +10,7 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{console, Event, FileReader, HtmlInputElement, HtmlLabelElement, Node};
 
+/// Set the keypad in the UI.
 pub fn set_keypad(k: &Rc<RefCell<[bool; 16]>>) {
     let keypad = document()
         .create_element("keypad")
@@ -43,6 +48,7 @@ pub fn set_keypad(k: &Rc<RefCell<[bool; 16]>>) {
     }
 }
 
+/// Set the breakpoint button in the UI.
 pub fn set_breakpoint(b: &Rc<RefCell<bool>>) {
     let breakpoint = document()
         .create_element("breakpoint")
@@ -76,6 +82,7 @@ pub fn set_breakpoint(b: &Rc<RefCell<bool>>) {
     closure.forget()
 }
 
+/// Set the button to allow the user to supply a ROM to the `Emulator`.
 pub fn set_file_reader(rom_buffer: &Rc<RefCell<Vec<u8>>>) {
     let filereader = FileReader::new().unwrap().dyn_into::<FileReader>().unwrap();
     let rom = Rc::clone(&rom_buffer);

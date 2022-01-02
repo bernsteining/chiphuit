@@ -1,3 +1,4 @@
+//! # A module to emulate the chip8 architecture, and process its opcodes logic.
 use js_sys::Math::random;
 use std::fmt;
 
@@ -77,15 +78,6 @@ impl Emulator {
     //! with 0s, a blank screen display, and a program counter set to 512 ready
     //! to process a chip8 ROM whenever a ROM is loaded into memory with the
     //! method load_game.
-    //!
-    //! # Examples
-    //!
-    //! Basic usage:
-    //!
-    //! ```
-    //! let emulator = Emulator::new();
-    //!
-    //! emulator.load_font();
     pub fn new() -> Emulator {
         Emulator {
             current_opcode: OpCode {
