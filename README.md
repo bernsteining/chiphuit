@@ -36,7 +36,7 @@ Add wasm to rustup targets:
 rustup target add wasm32-unknown-unknown
 ```
 
-Then, run the _build.sh_ script. It will compile the Rust code to WebAssembly, and run the challenge on `127.0.0.1:4000`.
+Then, run the _build.sh_ script. It will compile the Rust code to WebAssembly, and run the emulator on `127.0.0.1:4000`.
 
 # Documentation
 
