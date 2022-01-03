@@ -31,20 +31,32 @@ pub fn set_keypad(k: &Rc<RefCell<[bool; 16]>>) {
         keypad_key.set_id(key);
         keypad_key.set_inner_html(key);
         keypad_key.set_class_name("key");
-
         keypad
             .append_child(&Node::from(keypad_key.clone()))
             .unwrap();
 
+        // Handle clicks on virtual keypad
         let k1 = Rc::clone(&k);
-        let closure = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
+        let click_callback = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
             k1.borrow_mut()[index] ^= true;
         }) as Box<dyn FnMut(_)>);
-
         keypad_key
-            .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+            .add_event_listener_with_callback("click", click_callback.as_ref().unchecked_ref())
             .unwrap();
-        closure.forget()
+        click_callback.forget();
+
+        // Handle keyboard events
+        let k2 = Rc::clone(&k);
+        let keyboard_callback = Closure::wrap(Box::new(move |_event: web_sys::KeyboardEvent| {
+            if _event.key().to_uppercase() == **key {
+                k2.borrow_mut()[index] ^= true;
+            }
+        }) as Box<dyn FnMut(_)>);
+        web_sys::window()
+            .unwrap()
+            .add_event_listener_with_callback("keydown", keyboard_callback.as_ref().unchecked_ref())
+            .unwrap();
+        keyboard_callback.forget();
     }
 }
 

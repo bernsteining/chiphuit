@@ -12,15 +12,6 @@
     <script src='./chiphuit.js'></script>
     <script>
         wasm_bindgen('./chiphuit_bg.wasm');
-
-        document.onkeypress = keyboard_game;
-
-        // handle keyboard
-        function keyboard_game(event) {
-            if (keys.includes(event.key.toUpperCase())) {
-                document.getElementById(event.key.toUpperCase()).click();
-            }
-        }
     </script>
 </body>
 
