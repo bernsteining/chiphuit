@@ -22,15 +22,9 @@ wee_alloc = { version = "0.4.2", optional = true }
 version = "0.3.4"
 features = [
   'Document',
-  'Element',
   'HtmlElement',
   'Node',
   'HtmlCanvasElement',
-  'WebGlBuffer',
-  'WebGlVertexArrayObject',
-  'WebGl2RenderingContext',
-  'WebGlProgram',
-  'WebGlShader',
   'Window',
   'CanvasRenderingContext2d',
   'ImageData',
