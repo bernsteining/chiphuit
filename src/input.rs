@@ -124,7 +124,7 @@ pub fn set_file_reader(rom_buffer: &Rc<RefCell<Vec<u8>>>) {
         let data = element.result().unwrap();
         let game_string: JsString = data.dyn_into::<JsString>().unwrap();
         let game_vec: Vec<u8> = game_string.iter().map(|x| x as u8).collect();
-        *rom.borrow_mut() = game_vec.clone();
+        *rom.borrow_mut() = game_vec;
         console::log_1(&format!("game loaded: {:?}", game_string).into());
     }) as Box<dyn FnMut(_)>);
 

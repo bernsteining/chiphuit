@@ -31,14 +31,12 @@ pub fn set_canvas() -> web_sys::CanvasRenderingContext2d {
 
     append_to_body(&canvas);
 
-    let canvas = canvas
+    canvas
         .get_context("2d")
         .expect("Should have a 2D Context.")
         .expect("Should have a rendering canvas.")
         .dyn_into::<web_sys::CanvasRenderingContext2d>()
-        .expect("Should have a rendering canvas.");
-
-    canvas
+        .expect("Should have a rendering canvas.")
 }
 
 /// Render the Emulator state in the browser to inspect its fields values at
@@ -96,7 +94,7 @@ pub fn draw_screen(context: &CanvasRenderingContext2d, boolean_screen: [bool; 64
         }
     }
     let graphic_screen =
-        ImageData::new_with_u8_clamped_array_and_sh(Clamped(&mut graphic_screen), WIDTH, HEIGHT)
+        ImageData::new_with_u8_clamped_array_and_sh(Clamped(&graphic_screen), WIDTH, HEIGHT)
             .unwrap();
     context.put_image_data(&graphic_screen, 0.0, 0.0);
 }

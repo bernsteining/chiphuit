@@ -36,7 +36,7 @@ impl OpCode {
     /// Util function to read the 3rd and 4th nibbles of the opcode in a single
     /// u8.
     fn get_third_and_fourth_nibbles_inline(&mut self) -> u8 {
-        return self.third_nibble << 4 | self.fourth_nibble;
+        self.third_nibble << 4 | self.fourth_nibble
     }
 
     /// Util function to read the 2nd, 3rd and 4th nibbles of the opcode
@@ -81,10 +81,10 @@ impl Emulator {
     pub fn new() -> Emulator {
         Emulator {
             current_opcode: OpCode {
-                first_nibble: 0 as u8,
-                second_nibble: 0 as u8,
-                third_nibble: 0 as u8,
-                fourth_nibble: 0 as u8,
+                first_nibble: 0_u8,
+                second_nibble: 0_u8,
+                third_nibble: 0_u8,
+                fourth_nibble: 0_u8,
             },
             memory: [0; 4096],
 
@@ -306,7 +306,7 @@ impl Emulator {
     /// VX to the right by 1.
     /// vx >>= 1
     fn _8xy6(&mut self) {
-        self.registers[15] = 00000001u8 & self.get_vx();
+        self.registers[15] = 1u8 & self.get_vx();
         self.registers[self.current_opcode.second_nibble as usize] >>= 1;
     }
 
@@ -384,7 +384,7 @@ impl Emulator {
                 let previous_state = self.screen[index];
                 self.screen[index] ^= row_pixels[i as usize];
 
-                if previous_state == true && self.screen[index] == false {
+                if previous_state && !self.screen[index] {
                     collision = true;
                 }
             }
@@ -425,7 +425,7 @@ impl Emulator {
     /// vx = get_key()
     fn fx0a(&mut self) {
         self.program_counter -= 2;
-        if self.keypad[self.get_vx() as usize] == true {
+        if self.keypad[self.get_vx() as usize] {
             self.registers[self.current_opcode.second_nibble as usize] = self.get_vx();
             self.program_counter += 2;
         }
