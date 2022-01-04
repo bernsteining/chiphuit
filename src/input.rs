@@ -38,23 +38,44 @@ pub fn set_keypad(k: &Rc<RefCell<[bool; 16]>>) {
         // Handle clicks on virtual keypad
         let k1 = Rc::clone(&k);
         let click_callback = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
-            k1.borrow_mut()[index] ^= true;
+            k1.borrow_mut()[index] = true;
         }) as Box<dyn FnMut(_)>);
         keypad_key
-            .add_event_listener_with_callback("click", click_callback.as_ref().unchecked_ref())
+            .add_event_listener_with_callback("mousedown", click_callback.as_ref().unchecked_ref())
+            .unwrap();
+        click_callback.forget();
+
+        let k1 = Rc::clone(&k);
+        let click_callback = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
+            k1.borrow_mut()[index] = false;
+        }) as Box<dyn FnMut(_)>);
+        keypad_key
+            .add_event_listener_with_callback("mouseup", click_callback.as_ref().unchecked_ref())
             .unwrap();
         click_callback.forget();
 
         // Handle keyboard events
-        let k2 = Rc::clone(&k);
+        let k3 = Rc::clone(&k);
         let keyboard_callback = Closure::wrap(Box::new(move |_event: web_sys::KeyboardEvent| {
             if _event.key().to_uppercase() == **key {
-                k2.borrow_mut()[index] ^= true;
+                k3.borrow_mut()[index] = true;
             }
         }) as Box<dyn FnMut(_)>);
         web_sys::window()
             .unwrap()
             .add_event_listener_with_callback("keydown", keyboard_callback.as_ref().unchecked_ref())
+            .unwrap();
+        keyboard_callback.forget();
+
+        let k4 = Rc::clone(&k);
+        let keyboard_callback = Closure::wrap(Box::new(move |_event: web_sys::KeyboardEvent| {
+            if _event.key().to_uppercase() == **key {
+                k4.borrow_mut()[index] = false;
+            }
+        }) as Box<dyn FnMut(_)>);
+        web_sys::window()
+            .unwrap()
+            .add_event_listener_with_callback("keyup", keyboard_callback.as_ref().unchecked_ref())
             .unwrap();
         keyboard_callback.forget();
     }

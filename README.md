@@ -62,7 +62,7 @@ Useful links that helped me understand the basics of writing an emulator:
 - Allow modifying emulator variables
 - allow other compilation targets than WASM
 - use a Bus structure to handle I/Os instead of bloated RefCells & closures everywhere
-- refactooooooor
+- refactooooooor especially input handles damn, and how about remapping keys to 1234/qwer/asdf/zxcv like everybody
 
 ### osef / pinaillage
 
