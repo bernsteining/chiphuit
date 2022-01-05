@@ -2,7 +2,10 @@
 //! - The keypad
 //! - The breakpoint
 //! - The file input to handle the ROM
-use crate::utils::{append_element_to_another, append_to_body, document};
+use crate::utils::{
+    append_element_to_another, append_to_body, document, set_callback_to_button,
+    set_callback_to_key,
+};
 use js_sys::JsString;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -11,7 +14,7 @@ use wasm_bindgen::JsCast;
 use web_sys::{console, Event, FileReader, HtmlInputElement, HtmlLabelElement, Node};
 
 /// Set the keypad in the UI.
-pub fn set_keypad(k: &Rc<RefCell<[bool; 16]>>) {
+pub fn set_keypad(emulator_keypad: &Rc<RefCell<[bool; 16]>>) {
     let keypad = document()
         .create_element("keypad")
         .expect("should have a keypad.");
@@ -21,7 +24,7 @@ pub fn set_keypad(k: &Rc<RefCell<[bool; 16]>>) {
 
     append_to_body(&keypad);
 
-    for (index, key) in [
+    for (index, &key) in [
         "1", "2", "3", "C", "4", "5", "6", "D", "7", "8", "9", "E", "A", "0", "B", "F",
     ]
     .iter()
@@ -36,53 +39,17 @@ pub fn set_keypad(k: &Rc<RefCell<[bool; 16]>>) {
             .unwrap();
 
         // Handle clicks on virtual keypad
-        let k1 = Rc::clone(&k);
-        let click_callback = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
-            k1.borrow_mut()[index] = true;
-        }) as Box<dyn FnMut(_)>);
-        keypad_key
-            .add_event_listener_with_callback("mousedown", click_callback.as_ref().unchecked_ref())
-            .unwrap();
-        click_callback.forget();
-
-        let k1 = Rc::clone(&k);
-        let click_callback = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
-            k1.borrow_mut()[index] = false;
-        }) as Box<dyn FnMut(_)>);
-        keypad_key
-            .add_event_listener_with_callback("mouseup", click_callback.as_ref().unchecked_ref())
-            .unwrap();
-        click_callback.forget();
+        set_callback_to_button(true, &keypad_key, emulator_keypad, index);
+        set_callback_to_button(false, &keypad_key, emulator_keypad, index);
 
         // Handle keyboard events
-        let k3 = Rc::clone(&k);
-        let keyboard_callback = Closure::wrap(Box::new(move |_event: web_sys::KeyboardEvent| {
-            if _event.key().to_uppercase() == **key {
-                k3.borrow_mut()[index] = true;
-            }
-        }) as Box<dyn FnMut(_)>);
-        web_sys::window()
-            .unwrap()
-            .add_event_listener_with_callback("keydown", keyboard_callback.as_ref().unchecked_ref())
-            .unwrap();
-        keyboard_callback.forget();
-
-        let k4 = Rc::clone(&k);
-        let keyboard_callback = Closure::wrap(Box::new(move |_event: web_sys::KeyboardEvent| {
-            if _event.key().to_uppercase() == **key {
-                k4.borrow_mut()[index] = false;
-            }
-        }) as Box<dyn FnMut(_)>);
-        web_sys::window()
-            .unwrap()
-            .add_event_listener_with_callback("keyup", keyboard_callback.as_ref().unchecked_ref())
-            .unwrap();
-        keyboard_callback.forget();
+        set_callback_to_key(true, key.to_string(), emulator_keypad, index);
+        set_callback_to_key(false, key.to_string(), emulator_keypad, index);
     }
 }
 
 /// Set the breakpoint button in the UI.
-pub fn set_breakpoint(b: &Rc<RefCell<bool>>) {
+pub fn set_breakpoint(emulator_breakpoint: &Rc<RefCell<bool>>) {
     let breakpoint = document()
         .create_element("breakpoint")
         .expect("should have a breakpoint.");
@@ -93,10 +60,10 @@ pub fn set_breakpoint(b: &Rc<RefCell<bool>>) {
 
     append_element_to_another(&breakpoint, "keypad");
 
-    let b1 = Rc::clone(&b);
+    let breakpoint_clone = Rc::clone(&emulator_breakpoint);
 
     let closure = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
-        *b1.borrow_mut() ^= true;
+        *breakpoint_clone.borrow_mut() ^= true;
 
         let _breakpoint = document()
             .get_element_by_id("breakpoint")
