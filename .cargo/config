@@ -1,0 +1,8 @@
+[build]
+target = "wasm32-unknown-unknown"
+
+[profile.release]
+# Tell `rustc` to optimize for small code size.
+opt-level = 3
+debug = false
+

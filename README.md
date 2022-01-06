@@ -36,7 +36,23 @@ Add wasm to rustup targets:
 rustup target add wasm32-unknown-unknown
 ```
 
-Then, run the _build.sh_ script. It will compile the Rust code to WebAssembly, and run the emulator on `127.0.0.1:4000`.
+Then run,
+
+```bash
+cargo build
+```
+
+Then run `wasm-bindgen` to generate JS bindings for the wasm file:
+
+```
+wasm-bindgen ./target/wasm32-unknown-unknown/release/chiphuit.wasm --out-dir build --no-typescript --target no-modules --remove-name-section  --remove-producers-section --omit-default-module-path --omit-imports
+```
+
+Finally, serve the emulator and play it on your favorite browser @ http://127.0.0.1:4000
+
+```
+basic-http-server build/
+```
 
 # Documentation
 
@@ -62,7 +78,8 @@ Useful links that helped me understand the basics of writing an emulator:
 - Allow modifying emulator variables
 - allow other compilation targets than WASM
 - use a Bus structure to handle I/Os instead of bloated RefCells & closures everywhere
-- refactooooooor especially input handles damn, and how about remapping keys to 1234/qwer/asdf/zxcv like everybody
+- how about remapping keys to 1234/qwer/asdf/zxcv like everybody
+- refactooooooor
 
 ### osef / pinaillage
 
