@@ -74,19 +74,19 @@ Useful links that helped me understand the basics of writing an emulator:
 
 ### soon
 
-- add gamepad support with [browser API](https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.GamepadEvent.html)
-- Allow modifying emulator variables
-- allow other compilation targets than WASM
 - use a Bus structure to handle I/Os instead of bloated RefCells & closures everywhere
+- refactor emulator_state rendering with [web_sys::HtmlTableElement](https://docs.rs/web-sys/latest/web_sys/struct.HtmlTableElement.html)
+- add beep sound with [web_sys::AudioContext](https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.AudioContext.html)
+- Allow to hide emulator state on click while running, otherwise allow modifying emulator variables
+- Allow other compilation targets than WASM and find a crate to render the screen (egui | wgpu | winit | glfw), or just run the emulator in the terminal?
 - how about remapping keys to 1234/qwer/asdf/zxcv like everybody
 - refactooooooor
 
 ### osef / pinaillage
 
 - Avoid ROM in string format in loading and directly use [read_as_array_buffer](https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.FileReader.html#method.read_as_array_buffer) instead of [read_as_binary_string](https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.FileReader.html#method.read_as_binary_string)
-- refactor emulator_state rendering
-- add beep sound with web_sys::{AudioContext, OscillatorType};
 - allow tracing opcodes
 - responsive CSS
 - add error handling to code instead of all the wild unwraps
 - set FPS / emulator speed during runtime
+- add gamepad support with [browser API](https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.GamepadEvent.html) not sure this one makes sense for chip8, but it will definitely be useful for future gaming architectures
