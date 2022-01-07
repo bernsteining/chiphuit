@@ -6,6 +6,18 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::Element;
 
+pub const EMULATOR_VARIABLES: [&str; 9] = [
+    "current opcode",
+    "registers",
+    "index registers",
+    "program counter",
+    "delay timer",
+    "sound timer",
+    "stack pointer",
+    "stack",
+    "running",
+];
+
 /// Util function to append a `web_sys::Node` to the body.
 pub fn append_to_body(element: &web_sys::Node) {
     web_sys::window()

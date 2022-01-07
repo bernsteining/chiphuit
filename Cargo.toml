@@ -37,7 +37,12 @@ features = [
   'FileList',
   'HtmlInputElement',
   'HtmlLabelElement',
-  'KeyboardEvent']
+  'KeyboardEvent',
+  'HtmlTableElement',
+  'HtmlCollection',
+  'HtmlTableRowElement',
+  'HtmlTableCellElement',
+  'HtmlCollection']
 
 [dev-dependencies]
 wasm-bindgen-test = "0.2"

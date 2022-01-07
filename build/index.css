@@ -138,4 +138,5 @@ input[type="file"] {
   top: 0;
   right: 0;
   font-size: small;
+  border-spacing: 30px 5px;
 }

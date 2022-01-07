@@ -1,8 +1,9 @@
 //! # A module to emulate the chip8 architecture, and process its opcodes logic.
 use js_sys::Math::random;
-use std::fmt;
+use std::{convert::TryInto, fmt};
+use wasm_bindgen::JsCast;
 
-use web_sys::console;
+use web_sys::{console, HtmlCollection};
 
 /// Chip8 fonts set.
 pub const FONTS: [u8; 80] = [
@@ -103,6 +104,19 @@ impl Emulator {
             keypad: [false; 16],
 
             running: true,
+        }
+    }
+
+    /// Update emulator state in the GUI.
+    pub fn update_emulator_state(&self, emulator_state: &HtmlCollection) {
+        let mut data;
+        for index in 1..10 {
+            data = emulator_state
+                .get_with_index(index)
+                .unwrap()
+                .dyn_into::<web_sys::HtmlTableCellElement>();
+
+            console::log_1(&format!("data: {:?}", data).into());
         }
     }
 
@@ -561,14 +575,10 @@ impl Emulator {
     }
 }
 
+// #[cfg(build = "debug")]
 /// Display trait to print `Emulator` state next to the screen in the browser.
 impl fmt::Display for Emulator {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            r#"<table style="border-spacing: 30px 5px;"><tr><th>variable</th><th>value</th></tr>"#,
-        );
-
         write!(
             f,
             "<tr><td>current opcode</td><td>{:X}{:X}{:X}{:X}</td></tr>",
@@ -623,8 +633,7 @@ impl fmt::Display for Emulator {
                 .collect::<String>()
         );
 
-        write!(f, "<tr><td>running</td> <td>{:?}<td></tr>", self.running);
-        write!(f, "</table>",)
+        write!(f, "<tr><td>running</td> <td>{:?}<td></tr>", self.running)
     }
 }
 

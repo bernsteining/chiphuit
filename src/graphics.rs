@@ -1,9 +1,9 @@
 //! # A module to display the screen of our `Emulator` with the [Canvas API](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API).
-use crate::utils::{append_to_body, document};
+use crate::utils::{append_to_body, document, EMULATOR_VARIABLES};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::Clamped;
 use wasm_bindgen::JsCast;
-use web_sys::{CanvasRenderingContext2d, ImageData};
+use web_sys::{CanvasRenderingContext2d, HtmlTableElement, HtmlTableRowElement, ImageData};
 
 pub const WIDTH: u32 = 64;
 pub const HEIGHT: u32 = 32;
@@ -41,23 +41,45 @@ pub fn set_canvas() -> web_sys::CanvasRenderingContext2d {
 
 /// Render the Emulator state in the browser to inspect its fields values at
 /// runtime..
-pub fn set_emulator_state() -> web_sys::Element {
+pub fn set_emulator_state() -> web_sys::HtmlCollection {
     let emulator_state = document()
-        .create_element("div")
-        .expect("should have an emulator state in top right corner.");
+        .create_element("table")
+        .expect("should have an element.")
+        .dyn_into::<web_sys::HtmlTableElement>()
+        .expect("should have an HtmlTableElement.");
 
     emulator_state.set_id("emulator_state");
     emulator_state.set_class_name("emulator_state");
 
-    document()
-        .body()
-        .expect("document should have a body")
-        .append_child(&emulator_state)
-        .unwrap();
+    emulator_state.create_t_body();
+
+    // for table headers
+    emulator_state.insert_row().unwrap();
+
+    let rows = emulator_state.rows();
+
+    rows.item(0)
+        .unwrap()
+        .set_inner_html("<th>variable</th><th>value</th>");
+
+    for variable in EMULATOR_VARIABLES.iter() {
+        let row = emulator_state
+            .insert_row()
+            .unwrap()
+            .dyn_into::<web_sys::HtmlTableRowElement>()
+            .unwrap();
+
+        let variable_cell = row.insert_cell().unwrap();
+
+        // init value cell
+        row.insert_cell().unwrap();
+
+        variable_cell.set_inner_html(variable);
+    }
 
     append_to_body(&emulator_state);
 
-    emulator_state
+    emulator_state.rows()
 }
 
 /// Render the chip8 Emulator screen in the browser using the Canvas API.
