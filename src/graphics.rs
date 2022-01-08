@@ -3,7 +3,7 @@ use crate::utils::{append_to_body, document, EMULATOR_VARIABLES};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::Clamped;
 use wasm_bindgen::JsCast;
-use web_sys::{CanvasRenderingContext2d, HtmlTableElement, HtmlTableRowElement, ImageData};
+use web_sys::{CanvasRenderingContext2d, ImageData};
 
 pub const WIDTH: u32 = 64;
 pub const HEIGHT: u32 = 32;

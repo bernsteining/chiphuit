@@ -1,6 +1,6 @@
 //! # A module to emulate the chip8 architecture, and process its opcodes logic.
 use js_sys::Math::random;
-use std::{convert::TryInto, fmt};
+use std::fmt;
 use wasm_bindgen::JsCast;
 
 use web_sys::{console, HtmlCollection, HtmlTableRowElement};
@@ -50,6 +50,17 @@ impl OpCode {
     }
 }
 
+/// Display Trait to print the `Emulator`'s current `OpCode` in the debugger.
+impl fmt::Display for OpCode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{:X}{:X}{:X}{:X}",
+            self.first_nibble, self.second_nibble, self.third_nibble, self.fourth_nibble
+        )
+    }
+}
+
 ///  A struct containing all the fields necessary to emulate chip8.
 pub struct Emulator {
     pub current_opcode: OpCode,
@@ -70,6 +81,36 @@ pub struct Emulator {
     pub keypad: [bool; 16],
 
     pub running: bool,
+}
+
+/// Print trait to display an `Emulator`'s specific fields into the debugger
+/// during runtime.
+pub trait Print {
+    fn printables(&self) -> Vec<String>;
+}
+
+/// Print Trait for `Emulator` in order to display its internal
+/// variables in the debugger during runtime.
+impl Print for Emulator {
+    fn printables(&self) -> Vec<String> {
+        vec![
+            format!("{}", self.current_opcode),
+            self.registers
+                .iter()
+                .map(|&x| format!("{:3X},", x))
+                .collect::<String>(),
+            format!("{}", self.index_register),
+            format!("{}", self.program_counter),
+            format!("{}", self.delay_timer),
+            format!("{}", self.sound_timer),
+            format!("{}", self.stack_pointer),
+            self.stack
+                .iter()
+                .map(|&x| format!("{},", x))
+                .collect::<String>(),
+            format!("{:?}", self.running),
+        ]
+    }
 }
 
 impl Emulator {
@@ -109,16 +150,18 @@ impl Emulator {
 
     /// Update emulator state in the GUI.
     pub fn update_emulator_state(&self, emulator_state: &HtmlCollection) {
-        for index in 1..10 {
+        // The index + 1 offset is to skip the first elements of the HtmlTable
+        // entries which are static.
+        for (index, printable) in self.printables().iter().enumerate() {
             emulator_state
-                .get_with_index(index)
+                .get_with_index((index + 1) as u32)
                 .unwrap()
                 .dyn_into::<HtmlTableRowElement>()
                 .unwrap()
                 .cells()
                 .item(1)
                 .unwrap()
-                .set_inner_html("variable to change");
+                .set_inner_html(printable);
         }
     }
 
@@ -574,68 +617,6 @@ impl Emulator {
                 );
             }
         }
-    }
-}
-
-// #[cfg(build = "debug")]
-/// Display trait to print `Emulator` state next to the screen in the browser.
-impl fmt::Display for Emulator {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "<tr><td>current opcode</td><td>{:X}{:X}{:X}{:X}</td></tr>",
-            self.current_opcode.first_nibble,
-            self.current_opcode.second_nibble,
-            self.current_opcode.third_nibble,
-            self.current_opcode.fourth_nibble
-        );
-
-        write!(
-            f,
-            "<tr><td>registers</td><td>{}</td></tr>",
-            self.registers
-                .iter()
-                .map(|&x| format!("{:3X},", x))
-                .collect::<String>()
-        );
-
-        write!(
-            f,
-            "<tr><td>index register</td> <td>{}</td></tr>",
-            self.index_register
-        );
-        write!(
-            f,
-            "<tr><td>program counter</td> <td>{}</td></tr>",
-            self.program_counter
-        );
-        write!(
-            f,
-            "<tr><td>delay timer</td> <td>{}</td> </tr>",
-            self.delay_timer
-        );
-
-        write!(
-            f,
-            "<tr><td>sound timer</td> <td>{}</td></tr>",
-            self.sound_timer
-        );
-
-        write!(
-            f,
-            "<tr><td>stack pointer</td> <td>{}</td></tr>",
-            self.stack_pointer
-        );
-        write!(
-            f,
-            "<tr><td>stack</td> <td>{}<td></tr>",
-            self.stack
-                .iter()
-                .map(|&x| format!("{},", x))
-                .collect::<String>()
-        );
-
-        write!(f, "<tr><td>running</td> <td>{:?}<td></tr>", self.running)
     }
 }
 

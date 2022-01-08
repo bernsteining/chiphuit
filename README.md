@@ -75,7 +75,6 @@ Useful links that helped me understand the basics of writing an emulator:
 ### soon
 
 - use a Bus structure to handle I/Os instead of bloated RefCells & closures everywhere
-- refactor emulator_state rendering with [web_sys::HtmlTableElement](https://docs.rs/web-sys/latest/web_sys/struct.HtmlTableElement.html)
 - add beep sound with [web_sys::AudioContext](https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.AudioContext.html)
 - Allow to hide emulator state on click while running, otherwise allow modifying emulator variables
 - Allow other compilation targets than WASM and find a crate to render the screen (egui | wgpu | winit | glfw), or just run the emulator in the terminal?
