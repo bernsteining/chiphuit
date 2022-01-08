@@ -3,7 +3,7 @@ use js_sys::Math::random;
 use std::{convert::TryInto, fmt};
 use wasm_bindgen::JsCast;
 
-use web_sys::{console, HtmlCollection};
+use web_sys::{console, HtmlCollection, HtmlTableRowElement};
 
 /// Chip8 fonts set.
 pub const FONTS: [u8; 80] = [
@@ -109,14 +109,16 @@ impl Emulator {
 
     /// Update emulator state in the GUI.
     pub fn update_emulator_state(&self, emulator_state: &HtmlCollection) {
-        let mut data;
         for index in 1..10 {
-            data = emulator_state
+            emulator_state
                 .get_with_index(index)
                 .unwrap()
-                .dyn_into::<web_sys::HtmlTableCellElement>();
-
-            console::log_1(&format!("data: {:?}", data).into());
+                .dyn_into::<HtmlTableRowElement>()
+                .unwrap()
+                .cells()
+                .item(1)
+                .unwrap()
+                .set_inner_html("variable to change");
         }
     }
 

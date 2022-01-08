@@ -42,7 +42,8 @@ features = [
   'HtmlCollection',
   'HtmlTableRowElement',
   'HtmlTableCellElement',
-  'HtmlCollection']
+  'HtmlCollection',
+  'HtmlTableCellElement']
 
 [dev-dependencies]
 wasm-bindgen-test = "0.2"
