@@ -1,4 +1,5 @@
 //! # A module to display the screen of our `Emulator` with the [Canvas API](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API).
+
 use crate::utils::{append_to_body, document, EMULATOR_VARIABLES};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::Clamped;
@@ -50,6 +51,22 @@ pub fn set_emulator_state() -> web_sys::HtmlCollection {
 
     emulator_state.set_id("emulator_state");
     emulator_state.set_class_name("emulator_state");
+
+    let callback = Closure::wrap(Box::new(move |_event: web_sys::KeyboardEvent| {
+        let _e = document().get_element_by_id("emulator_state").unwrap();
+        if _event.key() == "Escape" {
+            match _e.has_attribute("hidden") {
+                true => _e.remove_attribute("hidden").unwrap(),
+                false => _e.set_attribute("hidden", "").unwrap(),
+            }
+        }
+    }) as Box<dyn FnMut(_)>);
+
+    web_sys::window()
+        .unwrap()
+        .add_event_listener_with_callback("keydown", callback.as_ref().unchecked_ref())
+        .unwrap();
+    callback.forget();
 
     emulator_state.create_t_body();
 
