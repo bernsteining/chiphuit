@@ -89,7 +89,6 @@ pub fn main_wasm() -> Result<(), JsValue> {
             }
         }
 
-        // emulator_state.set_inner_html(&emulator.to_string());
         emulator.update_emulator_state(&emulator_state);
 
         graphics::draw_screen(&context, emulator.screen);

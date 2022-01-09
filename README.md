@@ -78,7 +78,6 @@ Useful links that helped me understand the basics of writing an emulator:
 - add beep sound with [web_sys::AudioContext](https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.AudioContext.html)
 - Allow to hide emulator state on click while running, otherwise allow modifying emulator variables
 - Allow other compilation targets than WASM and find a crate to render the screen (egui | wgpu | winit | glfw), or just run the emulator in the terminal?
-- how about remapping keys to 1234/qwer/asdf/zxcv like everybody
 - refactooooooor
 
 ### osef / pinaillage
