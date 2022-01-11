@@ -131,7 +131,7 @@ input[type="file"] {
   cursor: pointer;
 }
 
-.emulator_state {
+.debugger {
   text-align: justify;
   max-width: min-content;
   position: fixed;
@@ -141,7 +141,7 @@ input[type="file"] {
   border-spacing: 30px 5px;
 }
 
-.emulator_state_button {
+.debugger_button {
   background-color: Transparent;
   background-repeat: no-repeat;
   border: 2px solid white;

@@ -28,10 +28,10 @@ use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 
 mod cpu;
+mod debugger;
 mod graphics;
 mod input;
 mod utils;
-
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
 #[cfg(feature = "wee_alloc")]
@@ -45,7 +45,7 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 pub fn main_wasm() -> Result<(), JsValue> {
     let context = graphics::set_canvas();
 
-    let emulator_state = graphics::set_emulator_state();
+    let debugger = debugger::Debugger::new();
 
     let k = Rc::new(RefCell::new([false; 16]));
     let b = Rc::new(RefCell::new(false));
@@ -87,7 +87,7 @@ pub fn main_wasm() -> Result<(), JsValue> {
             for _ in 0..10 {
                 emulator.cycle();
             }
-            emulator.update_emulator_state(&emulator_state);
+            emulator.update_emulator_state(&debugger.element.rows());
         }
 
         graphics::draw_screen(&context, emulator.screen);
