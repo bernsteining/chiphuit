@@ -140,3 +140,16 @@ input[type="file"] {
   font-size: small;
   border-spacing: 30px 5px;
 }
+
+.emulator_state_button {
+  background-color: Transparent;
+  background-repeat: no-repeat;
+  border: 2px solid white;
+  border-radius: 5px;
+  cursor: pointer;
+  overflow: hidden;
+  outline: none;
+  color: white;
+  padding: 5px;
+  display: table-cell;
+}

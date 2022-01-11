@@ -41,7 +41,7 @@ pub fn set_canvas() -> web_sys::CanvasRenderingContext2d {
 }
 
 /// Render the Emulator state in the browser to inspect its fields values at
-/// runtime..
+/// runtime.
 pub fn set_emulator_state() -> web_sys::HtmlCollection {
     let emulator_state = document()
         .create_element("table")
@@ -94,9 +94,75 @@ pub fn set_emulator_state() -> web_sys::HtmlCollection {
         variable_cell.set_inner_html(variable);
     }
 
+    // add edit n commit row
+    let modify_emulator_row = emulator_state
+        .insert_row()
+        .unwrap()
+        .dyn_into::<web_sys::HtmlTableRowElement>()
+        .unwrap();
+
+    let edit = modify_emulator_row.insert_cell().unwrap();
+
+    let commit = modify_emulator_row.insert_cell().unwrap();
+
+    edit.set_class_name("emulator_state_button");
+    edit.set_id("emulator_state_edit");
+    edit.set_inner_html("edit");
+
+    commit.set_class_name("emulator_state_button");
+    commit.set_inner_html("commit");
+
     append_to_body(&emulator_state);
 
+    let callback = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
+        let rows = document()
+            .get_element_by_id("emulator_state")
+            .unwrap()
+            .dyn_into::<web_sys::HtmlTableElement>()
+            .unwrap()
+            .rows();
+
+        editcontent(&rows);
+    }) as Box<dyn FnMut(_)>);
+
+    // call editcontent in match arms
+
+    edit.add_event_listener_with_callback("mousedown", callback.as_ref().unchecked_ref())
+        .unwrap();
+    callback.forget();
+
     emulator_state.rows()
+
+    // edit and commit row should be visible only if running = false
+
+    // commit should push these cells in the emulator struct
+    // How? Emulator trait from serde?
+}
+
+/// Set the debugger editable for the user.
+pub fn editcontent(rows: &web_sys::HtmlCollection) {
+    match rows
+        .get_with_index(1)
+        .unwrap()
+        .has_attribute("contenteditable")
+    {
+        true => {
+            for index in 1..9 {
+                rows.get_with_index(index)
+                    .unwrap()
+                    .remove_attribute("contenteditable")
+                    .unwrap()
+            }
+        }
+        false => {
+            for index in 1..9 {
+                rows.get_with_index(index)
+                    .unwrap()
+                    .set_attribute("contenteditable", "true")
+                    .unwrap()
+            }
+        }
+    }
 }
 
 /// Render the chip8 Emulator screen in the browser using the Canvas API.

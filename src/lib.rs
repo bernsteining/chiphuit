@@ -87,9 +87,8 @@ pub fn main_wasm() -> Result<(), JsValue> {
             for _ in 0..10 {
                 emulator.cycle();
             }
+            emulator.update_emulator_state(&emulator_state);
         }
-
-        emulator.update_emulator_state(&emulator_state);
 
         graphics::draw_screen(&context, emulator.screen);
     }) as Box<dyn FnMut()>));
