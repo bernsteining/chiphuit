@@ -9,7 +9,7 @@ use web_sys::Element;
 pub const EMULATOR_VARIABLES: [&str; 9] = [
     "current opcode",
     "registers",
-    "index registers",
+    "index register",
     "program counter",
     "delay timer",
     "sound timer",
