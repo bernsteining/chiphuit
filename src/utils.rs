@@ -48,6 +48,19 @@ pub fn document() -> web_sys::Document {
         .expect("should have a document.")
 }
 
+/// Util function to set basic attributes of HTML page.
+pub fn set_document() {
+    document().set_title("chip8 emulator");
+
+    let head = document().head().unwrap();
+
+    let link = document().create_element("link").unwrap();
+    link.set_attribute("rel", "stylesheet").unwrap();
+    link.set_attribute("href", "chiphuit.css").unwrap();
+
+    head.append_child(&link).unwrap();
+}
+
 /// Util function for the event loop.
 pub fn set_timeout(f: &Closure<dyn FnMut()>, timeout_ms: i32) -> i32 {
     web_sys::window()

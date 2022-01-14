@@ -43,6 +43,7 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 /// Main function that initializes the emulator, the keypad, and the screen
 /// before inserting the ROM in the Emulator to play.
 pub fn main_wasm() -> Result<(), JsValue> {
+    utils::set_document();
     let context = graphics::set_canvas();
 
     let debugger = debugger::Debugger::new();
