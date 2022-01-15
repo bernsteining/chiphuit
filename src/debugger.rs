@@ -1,3 +1,4 @@
+//! # A module to view and modify the `Emulator` variables in the GUI.
 use crate::utils::{append_to_body, document, EMULATOR_VARIABLES};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;

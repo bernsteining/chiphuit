@@ -81,7 +81,9 @@ pub struct Emulator {
 
     pub keypad: Rc<RefCell<[bool; 16]>>,
 
-    pub running: bool,
+    pub rom_buffer: Rc<RefCell<Vec<u8>>>,
+
+    pub running: Rc<RefCell<bool>>,
 }
 
 /// Print trait to display an `Emulator`'s specific fields into the debugger
@@ -109,7 +111,7 @@ impl Print for Emulator {
                 .iter()
                 .map(|&x| format!("{},", x))
                 .collect::<String>(),
-            format!("{:?}", self.running),
+            format!("{:?}", self.running.borrow()),
         ]
     }
 }
@@ -145,7 +147,9 @@ impl Emulator {
 
             keypad: Rc::new(RefCell::new([false; 16])),
 
-            running: true,
+            running: Rc::new(RefCell::new(false)),
+
+            rom_buffer: Rc::new(RefCell::new(Vec::new())),
         }
     }
 
@@ -172,19 +176,20 @@ impl Emulator {
         self.memory[0..80].copy_from_slice(&FONTS);
     }
 
-    /// Loads the `game` ROM into the `Emulator` instance's memory at offset
+    /// Loads the ROM into the `Emulator` instance's memory at offset
     /// 512.
-    pub fn load_game(&mut self, game: Vec<u8>) {
-        self.memory[512..512 + game.len()].copy_from_slice(&game);
+    pub fn load_rom(&mut self) {
+        let rom_length = self.rom_buffer.borrow().len();
+        self.memory[512..512 + rom_length].copy_from_slice(&self.rom_buffer.borrow());
+        self.rom_buffer.borrow_mut().clear();
     }
 
-    /// Hotswaps the `game` ROM intro the `Emulator` instance's memory at
+    /// Hotswaps the ROM intro the `Emulator` instance's memory at
     /// offset 512. This allows to change the game ran by the `Emulator` at
     /// runtime without reload the page. `Emulator` fields are reinitialized as
     /// if `Emulator::new()` was called in order to have a fresh `Emulator`
     /// state.
-    pub fn hotswap(&mut self, game: Vec<u8>) {
-        //reinitialize emulator state
+    pub fn hotswap(&mut self) {
         self.memory = [0; 4096];
         self.screen = [false; 64 * 32];
         self.registers = [0; 16];
@@ -195,7 +200,7 @@ impl Emulator {
         self.delay_timer = 0;
         self.sound_timer = 0;
 
-        self.load_game(game);
+        self.load_rom();
     }
 
     /// Decrements `Emulator` timers.
