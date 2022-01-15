@@ -2,7 +2,8 @@
 use crate::utils::{append_to_body, document, EMULATOR_VARIABLES};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::HtmlTableRowElement;
+use web_sys::{HtmlTableCellElement, HtmlTableRowElement};
+
 /// An `Emulator` debugger.
 pub struct Debugger {
     pub element: web_sys::HtmlTableElement,
@@ -15,7 +16,8 @@ impl Debugger {
         set_show_hide_callback();
         fill_rows(&debugger);
         step_and_memory(&debugger);
-        edit_and_commit(&debugger);
+        edit(&debugger);
+        commit(&debugger);
         Debugger { element: debugger }
     }
 }
@@ -29,6 +31,7 @@ fn create_element() -> web_sys::HtmlTableElement {
         .expect("should have an HtmlTableElement.");
     element.set_id("debugger");
     element.set_class_name("debugger");
+    append_to_body(&element);
     element
 }
 
@@ -82,8 +85,6 @@ fn step_and_memory(element: &web_sys::HtmlTableElement) {
     memory_viewer.set_class_name("debugger_button");
     memory_viewer.set_inner_html("memory viewer");
 
-    append_to_body(&element);
-
     let step_callback = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
         // this should run cycle() on the `Emulator`.
     }) as Box<dyn FnMut(_)>);
@@ -107,25 +108,18 @@ fn step_and_memory(element: &web_sys::HtmlTableElement) {
 }
 
 /// Set callbacks to allow modification of the `Emulator`'s fields.
-fn edit_and_commit(element: &web_sys::HtmlTableElement) {
-    let modify_emulator_row = element
+fn edit(element: &web_sys::HtmlTableElement) {
+    let edit = element
         .insert_row()
         .unwrap()
         .dyn_into::<web_sys::HtmlTableRowElement>()
+        .unwrap()
+        .insert_cell()
         .unwrap();
-
-    let edit = modify_emulator_row.insert_cell().unwrap();
-
-    let commit = modify_emulator_row.insert_cell().unwrap();
 
     edit.set_class_name("debugger_button");
     edit.set_id("debugger_edit");
     edit.set_inner_html("edit");
-
-    commit.set_class_name("debugger_button");
-    commit.set_inner_html("commit");
-
-    append_to_body(&element);
 
     let edit_callback = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
         let rows = document()
@@ -135,7 +129,7 @@ fn edit_and_commit(element: &web_sys::HtmlTableElement) {
             .expect("should have an HtmlTableElement.")
             .rows();
 
-        let range = 1..9;
+        let range = 1..EMULATOR_VARIABLES.len();
 
         match rows
             .get_with_index(1)
@@ -144,16 +138,14 @@ fn edit_and_commit(element: &web_sys::HtmlTableElement) {
         {
             true => {
                 for index in range {
-                    rows.get_with_index(index)
-                        .unwrap()
+                    get_value_cell_from_nth_row(&rows, index as u32)
                         .remove_attribute("contenteditable")
                         .unwrap()
                 }
             }
             false => {
                 for index in range {
-                    rows.get_with_index(index)
-                        .unwrap()
+                    get_value_cell_from_nth_row(&rows, index as u32)
                         .set_attribute("contenteditable", "true")
                         .unwrap()
                 }
@@ -164,6 +156,22 @@ fn edit_and_commit(element: &web_sys::HtmlTableElement) {
     edit.add_event_listener_with_callback("mousedown", edit_callback.as_ref().unchecked_ref())
         .unwrap();
     edit_callback.forget();
+}
+
+/// Set callback to modify an `Emulator` struct in the GUI.
+fn commit(element: &web_sys::HtmlTableElement) {
+    let rows = element.rows();
+
+    let commit = rows
+        .get_with_index(rows.length() - 1)
+        .unwrap()
+        .dyn_into::<web_sys::HtmlTableRowElement>()
+        .unwrap()
+        .insert_cell()
+        .unwrap();
+
+    commit.set_class_name("debugger_button");
+    commit.set_inner_html("commit");
 
     let commit_callback = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
         let rows = document()
@@ -175,14 +183,9 @@ fn edit_and_commit(element: &web_sys::HtmlTableElement) {
 
         let range = 1..9;
 
-        if rows
-            .get_with_index(1)
-            .unwrap()
-            .has_attribute("contenteditable")
-        {
+        if get_value_cell_from_nth_row(&rows, 1).has_attribute("contenteditable") {
             for index in range {
-                rows.get_with_index(index)
-                    .unwrap()
+                get_value_cell_from_nth_row(&rows, index)
                     .remove_attribute("contenteditable")
                     .unwrap()
 
@@ -198,7 +201,6 @@ fn edit_and_commit(element: &web_sys::HtmlTableElement) {
         .unwrap();
     commit_callback.forget();
 }
-
 /// Set callbacks to allow hiding the `Debugger` in the GUI.
 fn set_show_hide_callback() {
     let callback = Closure::wrap(Box::new(move |_event: web_sys::KeyboardEvent| {
@@ -216,4 +218,20 @@ fn set_show_hide_callback() {
         .add_event_listener_with_callback("keydown", callback.as_ref().unchecked_ref())
         .unwrap();
     callback.forget();
+}
+
+/// A helper function to get the value of the `Debugger` at a specific row.
+fn get_value_cell_from_nth_row(
+    rows: &web_sys::HtmlCollection,
+    row_index: u32,
+) -> HtmlTableCellElement {
+    rows.get_with_index(row_index)
+        .unwrap()
+        .dyn_into::<HtmlTableRowElement>()
+        .unwrap()
+        .cells()
+        .item(1)
+        .unwrap()
+        .dyn_into::<HtmlTableCellElement>()
+        .unwrap()
 }
