@@ -1,8 +1,9 @@
 //! # A module to emulate the chip8 architecture, and process its opcodes logic.
 use js_sys::Math::random;
+use std::cell::RefCell;
 use std::fmt;
+use std::rc::Rc;
 use wasm_bindgen::JsCast;
-
 use web_sys::{console, HtmlCollection, HtmlTableRowElement};
 
 /// Chip8 fonts set.
@@ -78,7 +79,7 @@ pub struct Emulator {
     delay_timer: u8,
     sound_timer: u8,
 
-    pub keypad: [bool; 16],
+    pub keypad: Rc<RefCell<[bool; 16]>>,
 
     pub running: bool,
 }
@@ -142,7 +143,7 @@ impl Emulator {
             delay_timer: 0,
             sound_timer: 0,
 
-            keypad: [false; 16],
+            keypad: Rc::new(RefCell::new([false; 16])),
 
             running: true,
         }
@@ -459,7 +460,8 @@ impl Emulator {
     /// (Usually the next instruction is a jump to skip a code block);
     /// if (key() == vx)
     fn ex9e(&mut self) {
-        if self.keypad[self.get_vx() as usize] {
+        if self.keypad.borrow()[self.registers[self.current_opcode.second_nibble as usize] as usize]
+        {
             self.skip_next_instruction();
         }
     }
@@ -468,7 +470,9 @@ impl Emulator {
     /// (Usually the next instruction is a jump to skip a code block).
     /// if (key() != vx)
     fn exa1(&mut self) {
-        if !self.keypad[self.get_vx() as usize] {
+        if !self.keypad.borrow()
+            [self.registers[self.current_opcode.second_nibble as usize] as usize]
+        {
             self.skip_next_instruction();
         }
     }
@@ -484,7 +488,8 @@ impl Emulator {
     /// vx = get_key()
     fn fx0a(&mut self) {
         self.program_counter -= 2;
-        if self.keypad[self.get_vx() as usize] {
+        if self.keypad.borrow()[self.registers[self.current_opcode.second_nibble as usize] as usize]
+        {
             self.registers[self.current_opcode.second_nibble as usize] = self.get_vx();
             self.program_counter += 2;
         }

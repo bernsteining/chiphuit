@@ -27,6 +27,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 
+mod app;
 mod cpu;
 mod debugger;
 mod graphics;
@@ -44,21 +45,15 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 /// before inserting the ROM in the Emulator to play.
 pub fn main_wasm() -> Result<(), JsValue> {
     utils::set_document();
-    let context = graphics::set_canvas();
-
+    let app = app::App::new();
+    let canvas = graphics::set_canvas();
     let debugger = debugger::Debugger::new();
+    let mut emulator = cpu::Emulator::new();
+    emulator.load_font();
 
-    let k = Rc::new(RefCell::new([false; 16]));
-    let b = Rc::new(RefCell::new(false));
-    let rom_buffer = Rc::new(RefCell::new(Vec::new()));
-
-    input::set_keypad(&k);
-    input::set_breakpoint(&b);
-    input::set_file_reader(&rom_buffer);
-
-    let k2 = Rc::clone(&k);
-    let b2 = Rc::clone(&b);
-    let rom = Rc::clone(&rom_buffer);
+    input::set_keypad(&emulator.keypad);
+    input::set_breakpoint(&app.breakpoint);
+    input::set_file_reader(&app.rom_buffer);
 
     let f = Rc::new(RefCell::new(None));
     let g = f.clone();
@@ -69,19 +64,15 @@ pub fn main_wasm() -> Result<(), JsValue> {
         graphics::request_animation_frame(f.borrow().as_ref().unwrap());
     }) as Box<dyn FnMut()>));
 
-    let mut emulator = cpu::Emulator::new();
-    emulator.load_font();
-
     // EVENT LOOP
     *g.borrow_mut() = Some(Closure::wrap(Box::new(move || {
         utils::set_timeout(t1.borrow().as_ref().unwrap(), 20);
 
-        emulator.keypad = *k2.borrow_mut();
-        emulator.running = *b2.borrow_mut();
+        emulator.running = *app.breakpoint.borrow();
 
-        if !rom.borrow().is_empty() {
-            emulator.hotswap(rom.borrow().clone());
-            rom.borrow_mut().clear();
+        if !app.rom_buffer.borrow().is_empty() {
+            emulator.hotswap(app.rom_buffer.borrow().clone());
+            app.rom_buffer.borrow_mut().clear();
         }
 
         if emulator.running {
@@ -91,7 +82,7 @@ pub fn main_wasm() -> Result<(), JsValue> {
             emulator.update_emulator_state(&debugger.element.rows());
         }
 
-        graphics::draw_screen(&context, emulator.screen);
+        graphics::draw_screen(&canvas, emulator.screen);
     }) as Box<dyn FnMut()>));
 
     graphics::request_animation_frame(g.borrow().as_ref().unwrap());
