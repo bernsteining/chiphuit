@@ -76,12 +76,13 @@ Useful links that helped me understand the basics of writing an emulator:
 
 ### soon
 
+- Write a serde serializer for Emulator from HtmlCollection?
+- package & publish on [wapm](https://wapm.io/)?
+- Add a Hex memory viewer / modifier in hexdump style
+- Finish step button -> Make it call emulatore.cycle() on click
 - add beep sound with [web_sys::AudioContext](https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.AudioContext.html)
-- Allow modifying emulator variables, almost done, gotta push them into the struct now
-- Allow other compilation targets than WASM and find a crate to render the screen (egui | wgpu | winit | glfw), or just run the emulator in the terminal?
-- Add a step button in debugger, how about a memory viewer / dumper / modifier?
-- refactooooooor - especially debugger.rs, buttons init could be in one function
-  and define callbacks separately.
+- Allow committing modified variables to Emulator with Message queue approach
+- Allow other compilation targets than WASM with conditional compilation and find a crate to render the screen (egui | wgpu | winit | glfw), or just run the emulator in the terminal?
 
 ### osef / pinaillage
 
