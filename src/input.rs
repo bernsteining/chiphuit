@@ -11,7 +11,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{console, Event, FileReader, HtmlInputElement, HtmlLabelElement, Node};
+use web_sys::{Event, FileReader, HtmlInputElement, HtmlLabelElement, Node};
 
 /// Set the keypad in the UI.
 pub fn set_keypad(emulator_keypad: &Rc<RefCell<[bool; 16]>>) {
@@ -86,13 +86,22 @@ pub fn set_breakpoint(emulator_breakpoint: &Rc<RefCell<bool>>) {
 pub fn set_file_reader(rom_buffer: &Rc<RefCell<Vec<u8>>>) {
     let filereader = FileReader::new().unwrap().dyn_into::<FileReader>().unwrap();
     let rom = Rc::clone(&rom_buffer);
+
     let onload = Closure::wrap(Box::new(move |event: Event| {
-        let element = event.target().unwrap().dyn_into::<FileReader>().unwrap();
-        let data = element.result().unwrap();
-        let game_string: JsString = data.dyn_into::<JsString>().unwrap();
-        let game_vec: Vec<u8> = game_string.iter().map(|x| x as u8).collect();
-        *rom.borrow_mut() = game_vec;
-        console::log_1(&format!("game loaded: {:?}", game_string).into());
+        let file = event
+            .target()
+            .unwrap()
+            .dyn_into::<FileReader>()
+            .unwrap()
+            .result()
+            .unwrap()
+            .dyn_into::<JsString>()
+            .unwrap()
+            .iter()
+            .map(|x| x as u8)
+            .collect();
+
+        *rom.borrow_mut() = file;
     }) as Box<dyn FnMut(_)>);
 
     filereader.set_onloadend(Some(onload.as_ref().unchecked_ref()));
