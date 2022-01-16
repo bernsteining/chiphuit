@@ -181,11 +181,11 @@ fn commit(element: &web_sys::HtmlTableElement) {
             .expect("should have an HtmlTableElement.")
             .rows();
 
-        let range = 1..9;
+        let range = 1..EMULATOR_VARIABLES.len();
 
         if get_value_cell_from_nth_row(&rows, 1).has_attribute("contenteditable") {
             for index in range {
-                get_value_cell_from_nth_row(&rows, index)
+                get_value_cell_from_nth_row(&rows, index as u32)
                     .remove_attribute("contenteditable")
                     .unwrap()
 
