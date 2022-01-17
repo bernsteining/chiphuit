@@ -10,7 +10,19 @@ The emulator is hosted online [here](https://chiphuit.glitch.me/) if you want to
 
 You can hide the debugger by pressing `Escape`.
 
-# build from sources
+# build & run from sources
+
+## lazy docker way:
+
+```
+docker build -t chiphuit -f Dockerfile .
+```
+
+```
+docker run -d chiphuit:latest
+```
+
+## not the lazy docker way:
 
 Make sure you have rust toolchain installed and up to date.
 
