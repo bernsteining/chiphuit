@@ -92,6 +92,7 @@ Useful links that helped me understand the basics of writing an emulator:
 - package & publish on [wapm](https://wapm.io/)?
 - Add a Hex memory viewer / modifier in hexdump style
 - Finish step button -> Make it call emulatore.cycle() on click
+- Make CSS responsive with media@
 - add beep sound with [web_sys::AudioContext](https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.AudioContext.html)
 - Allow committing modified variables to Emulator with Message queue approach
 - Allow other compilation targets than WASM with conditional compilation and find a crate to render the screen (egui | wgpu | winit | glfw), or just run the emulator in the terminal?

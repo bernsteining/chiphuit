@@ -37,6 +37,7 @@ features = [
   'HtmlInputElement',
   'HtmlLabelElement',
   'KeyboardEvent',
+  'TouchEvent',
   'HtmlTableElement',
   'HtmlCollection',
   'HtmlTableRowElement',

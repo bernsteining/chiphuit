@@ -81,7 +81,7 @@ pub fn set_callback_to_button(
     index: usize,
 ) {
     let keypad_clone = Rc::clone(&keypad);
-    let callback = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
+    let mouse_callback = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
         keypad_clone.borrow_mut()[index] = press;
     }) as Box<dyn FnMut(_)>);
 
@@ -91,10 +91,26 @@ pub fn set_callback_to_button(
                 true => "mousedown",
                 false => "mouseup",
             },
-            callback.as_ref().unchecked_ref(),
+            mouse_callback.as_ref().unchecked_ref(),
         )
         .unwrap();
-    callback.forget();
+    mouse_callback.forget();
+
+    let keypad_clone = Rc::clone(&keypad);
+    let touch_callback = Closure::wrap(Box::new(move |_event: web_sys::TouchEvent| {
+        keypad_clone.borrow_mut()[index] = press;
+    }) as Box<dyn FnMut(_)>);
+
+    button
+        .add_event_listener_with_callback(
+            match press {
+                true => "touchstart",
+                false => "touchend",
+            },
+            touch_callback.as_ref().unchecked_ref(),
+        )
+        .unwrap();
+    touch_callback.forget();
 }
 
 /// Util function to set listeners and callbacks on keyboard keys.

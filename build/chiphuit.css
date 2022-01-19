@@ -53,6 +53,7 @@ canvas {
   text-align: center;
   padding-top: 17px;
   cursor: pointer;
+  user-select: none;
 }
 
 .key:hover {
@@ -76,6 +77,7 @@ canvas {
   cursor: pointer;
   grid-row: 5;
   grid-column: 1/5;
+  user-select: none;
 }
 
 .breakpoint:hover {
@@ -91,6 +93,7 @@ canvas {
   border-color: #eeeeee;
   display: flex;
   text-align: center;
+  user-select: none;
 
   -webkit-transition-duration: 0.4s; /* Safari */
   transition-duration: 0.4s;
