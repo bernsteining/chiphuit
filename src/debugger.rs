@@ -2,6 +2,7 @@
 use crate::utils::{append_to_body, document, EMULATOR_VARIABLES};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
+use web_sys::HtmlElement;
 use web_sys::{HtmlTableCellElement, HtmlTableRowElement};
 
 /// An `Emulator` debugger.
@@ -204,11 +205,23 @@ fn commit(element: &web_sys::HtmlTableElement) {
 /// Set callbacks to allow hiding the `Debugger` in the GUI.
 fn set_show_hide_callback() {
     let callback = Closure::wrap(Box::new(move |_event: web_sys::KeyboardEvent| {
-        let _e = document().get_element_by_id("debugger").unwrap();
+        let debugger_style = document()
+            .get_element_by_id("debugger")
+            .unwrap()
+            .dyn_into::<HtmlElement>()
+            .unwrap()
+            .style();
+
         if _event.key() == "Escape" {
-            match _e.has_attribute("hidden") {
-                true => _e.remove_attribute("hidden").unwrap(),
-                false => _e.set_attribute("hidden", "").unwrap(),
+            match debugger_style
+                .get_property_value("display")
+                .unwrap()
+                .as_str()
+            {
+                "none" => debugger_style
+                    .set_property("display", "inline-block")
+                    .unwrap(),
+                _ => debugger_style.set_property("display", "none").unwrap(),
             }
         }
     }) as Box<dyn FnMut(_)>);
