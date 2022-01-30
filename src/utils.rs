@@ -4,7 +4,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::Element;
+use web_sys::{Element, HtmlElement};
 
 pub const EMULATOR_VARIABLES: [&str; 9] = [
     "current opcode",
@@ -139,6 +139,40 @@ pub fn set_callback_to_key(
         )
         .unwrap();
     callback.forget();
+}
+
+/// Util Closure to switch from keypad view to debugger view and vice-versa.
+pub fn change_view() -> Closure<dyn FnMut(web_sys::MouseEvent)> {
+    Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
+        let debugger_style = document()
+            .get_element_by_id("debugger")
+            .unwrap()
+            .dyn_into::<HtmlElement>()
+            .unwrap()
+            .style();
+
+        let keypad_style = document()
+            .get_element_by_id("keypad")
+            .unwrap()
+            .dyn_into::<HtmlElement>()
+            .unwrap()
+            .style();
+
+        match debugger_style
+            .get_property_value("display")
+            .unwrap()
+            .as_str()
+        {
+            "none" => {
+                debugger_style.set_property("display", "flex").unwrap();
+                keypad_style.set_property("display", "none").unwrap()
+            }
+            _ => {
+                debugger_style.set_property("display", "none").unwrap();
+                keypad_style.set_property("display", "grid").unwrap()
+            }
+        }
+    }) as Box<dyn FnMut(_)>)
 }
 
 // Should write a set_gamepad_to_key here if we want to handle Gamepad events

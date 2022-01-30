@@ -1,9 +1,8 @@
 //! # A module to view and modify the `Emulator` variables in the GUI.
-use crate::utils::{append_to_body, document, EMULATOR_VARIABLES};
+use crate::utils::{append_to_body, change_view, document, EMULATOR_VARIABLES};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::HtmlElement;
-use web_sys::{HtmlTableCellElement, HtmlTableRowElement};
+use web_sys::{HtmlElement, HtmlTableCellElement, HtmlTableRowElement};
 
 /// An `Emulator` debugger.
 pub struct Debugger {
@@ -14,11 +13,11 @@ impl Debugger {
     /// Instanciate `Debugger` in the GUI with all necessary callbacks.
     pub fn new() -> Debugger {
         let debugger = create_element();
-        set_show_hide_callback();
         fill_rows(&debugger);
         step_and_memory(&debugger);
         edit(&debugger);
         commit(&debugger);
+        set_breakpoint_and_keypad_view(&debugger);
         Debugger { element: debugger }
     }
 }
@@ -202,35 +201,47 @@ fn commit(element: &web_sys::HtmlTableElement) {
         .unwrap();
     commit_callback.forget();
 }
-/// Set callbacks to allow hiding the `Debugger` in the GUI.
-fn set_show_hide_callback() {
-    let callback = Closure::wrap(Box::new(move |_event: web_sys::KeyboardEvent| {
-        let debugger_style = document()
-            .get_element_by_id("debugger")
+
+/// Set button to go back to keypad view and to play/pause in debugger view.
+fn set_breakpoint_and_keypad_view(element: &web_sys::HtmlTableElement) {
+    let row = element
+        .insert_row()
+        .unwrap()
+        .dyn_into::<web_sys::HtmlTableRowElement>()
+        .unwrap();
+
+    let breakpoint = row.insert_cell().unwrap();
+
+    breakpoint.set_class_name("debugger_button");
+    breakpoint.set_id("debugger_breakpoint");
+    breakpoint.set_inner_html("⏯");
+
+    let closure = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
+        document()
+            .get_element_by_id("breakpoint")
             .unwrap()
             .dyn_into::<HtmlElement>()
             .unwrap()
-            .style();
-
-        if _event.key() == "Escape" {
-            match debugger_style
-                .get_property_value("display")
-                .unwrap()
-                .as_str()
-            {
-                "none" => debugger_style
-                    .set_property("display", "inline-block")
-                    .unwrap(),
-                _ => debugger_style.set_property("display", "none").unwrap(),
-            }
-        }
+            .click();
     }) as Box<dyn FnMut(_)>);
 
-    web_sys::window()
-        .unwrap()
-        .add_event_listener_with_callback("keydown", callback.as_ref().unchecked_ref())
+    breakpoint
+        .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
         .unwrap();
-    callback.forget();
+    closure.forget();
+
+    let keypad = row.insert_cell().unwrap();
+
+    keypad.set_class_name("debugger_button");
+    keypad.set_id("keypad_view");
+    keypad.set_inner_html("↩");
+
+    let closure = change_view();
+
+    keypad
+        .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+        .unwrap();
+    closure.forget()
 }
 
 /// A helper function to get the value of the `Debugger` at a specific row.

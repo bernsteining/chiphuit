@@ -52,6 +52,7 @@ pub fn main_wasm() -> Result<(), JsValue> {
     input::set_keypad(&emulator.keypad);
     input::set_breakpoint(&emulator.running);
     input::set_file_reader(&emulator.rom_buffer);
+    input::set_debug();
 
     let f = Rc::new(RefCell::new(None));
     let g = f.clone();

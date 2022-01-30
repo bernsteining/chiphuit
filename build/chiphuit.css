@@ -13,15 +13,10 @@ body {
   touch-action: none;
 }
 
-/* When moving the mouse over the close custom-file-upload */
-.closebtn:hover {
-  color: black;
-}
-
 .keypad-base {
   display: grid;
   grid-template-rows: repeat(5, auto);
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   grid-gap: 5px;
   grid-auto-columns: 1fr;
   font-size: 2pc;
@@ -33,7 +28,7 @@ body {
   background-color: darkmagenta;
   border: 2px solid black;
   border-radius: 5px;
-  grid-column: span 2;
+  grid-column: auto;
   color: white;
   user-select: none;
 }
@@ -48,7 +43,7 @@ body {
   border: 2px solid black;
   border-radius: 5px;
   grid-row: 5;
-  grid-column: 1/5;
+  grid-column: span 1;
 }
 
 .breakpoint:hover {
@@ -62,13 +57,10 @@ body {
   border: 2px solid black;
   border-radius: 5px;
   border-color: #eeeeee;
-  display: flex;
-  text-align: center;
   user-select: none;
 
   -webkit-transition-duration: 0.4s; /* Safari */
   transition-duration: 0.4s;
-  text-decoration: none;
   overflow: hidden;
 }
 
@@ -98,22 +90,25 @@ input[type="file"] {
 }
 .file-upload {
   border: 2px solid black;
-  display: inline-block;
-  padding: 6px 12px;
-  grid-column: 5 / span 4;
-  grid-row: 5;
   cursor: pointer;
+  grid-row: 5;
+  grid-column: span 2;
+}
+
+.debug {
+  background-color: darkmagenta;
+  border: 2px solid black;
+  border-radius: 5px;
+  grid-row: 5;
+  grid-column: span 1;
 }
 
 .debugger {
   text-align: justify;
-  max-width: min-content;
-  position: fixed;
-  top: 0;
-  right: 0;
   font-size: small;
   border-spacing: 30px 5px;
   display: none;
+  color: white;
 }
 
 .debugger_button {

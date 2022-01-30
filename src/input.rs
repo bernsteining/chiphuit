@@ -3,7 +3,7 @@
 //! - The breakpoint
 //! - The file input to handle the ROM
 use crate::utils::{
-    append_element_to_another, append_to_body, document, set_callback_to_button,
+    append_element_to_another, append_to_body, change_view, document, set_callback_to_button,
     set_callback_to_key,
 };
 use js_sys::JsString;
@@ -56,7 +56,7 @@ pub fn set_breakpoint(emulator_breakpoint: &Rc<RefCell<bool>>) {
 
     breakpoint.set_id("breakpoint");
     breakpoint.set_class_name("breakpoint");
-    breakpoint.set_inner_html("play");
+    breakpoint.set_inner_html("⏯");
 
     append_element_to_another(&breakpoint, "keypad");
 
@@ -64,19 +64,29 @@ pub fn set_breakpoint(emulator_breakpoint: &Rc<RefCell<bool>>) {
 
     let closure = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
         *breakpoint_clone.borrow_mut() ^= true;
-
-        let _breakpoint = document()
-            .get_element_by_id("breakpoint")
-            .expect("should have a breakpoint.");
-        let button_content = _breakpoint.inner_html();
-
-        match button_content.as_ref() {
-            "play" => _breakpoint.set_inner_html("pause"),
-            _ => _breakpoint.set_inner_html("play"),
-        }
     }) as Box<dyn FnMut(_)>);
 
     breakpoint
+        .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+        .unwrap();
+    closure.forget()
+}
+
+/// Set the debug button in the UI.
+pub fn set_debug() {
+    let debug = document()
+        .create_element("debug")
+        .expect("should have a debug.");
+
+    debug.set_id("debug");
+    debug.set_class_name("debug");
+    debug.set_inner_html("⚙");
+
+    append_element_to_another(&debug, "keypad");
+
+    let closure = change_view();
+
+    debug
         .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
         .unwrap();
     closure.forget()
@@ -123,7 +133,7 @@ pub fn set_file_reader(rom_buffer: &Rc<RefCell<Vec<u8>>>) {
         .unwrap();
 
     label.set_html_for("file-upload");
-    label.set_inner_text("Choose chip8 ROM");
+    label.set_inner_text("Select ROM");
     label.set_class_name("file-upload");
 
     append_element_to_another(&label, "keypad");

@@ -2,13 +2,11 @@
 
 Yet another chip8 emulator, written in Rust compiled to WASM.
 
-![The emulator running](assets/emulator.png)
+![The emulator running](assets/emulator_landscape.png)
 
 # play
 
 The emulator is hosted online [here](https://chiphuit.glitch.me/) if you want to give it a try without building from sources, you will have to give the emulator the game you want to play, [some chip8 games to download](https://github.com/kripod/chip8-roms/tree/master/games).
-
-You can pop the debugger with `Escape` key.
 
 # build & run from sources
 
@@ -76,6 +74,10 @@ Generate & read the documentation of the project
 cargo doc --document-private-items --open
 ```
 
+The emulator also has a debugger view that allows to see the emulator internal variables. Modifying variables isn't supported yet, but it will be (hopefully) possible in future versions.
+
+![The emulator with the debugger](assets/emulator_debugger.png)
+
 Useful links that helped me understand the basics of writing an emulator:
 
 [How to write a chip8 emulator by Laurence Muller](https://multigesture.net/articles/how-to-write-an-emulator-chip-8-interpreter/)
@@ -84,27 +86,31 @@ Useful links that helped me understand the basics of writing an emulator:
 
 [Awesome chip8 rom to test opcodes correctness](https://github.com/corax89/chip8-test-rom)
 
-## Todolist
+# Todolist
 
-### soon
+## debugger
 
+- Add a Hex memory viewer / modifier in hexdump style
 - Write a serde serializer for Emulator from HtmlCollection?
 - Write a Message Queue between the Debugger struct and the Emulator struct to allow debugging
-- package & publish on [wapm](https://wapm.io/)?
-- Add a Hex memory viewer / modifier in hexdump style
 - Finish step button -> Make it call emulatore.cycle() on click
-- add beep sound with [web_sys::AudioContext](https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.AudioContext.html)
-- Allow other compilation targets than WASM with conditional compilation and find a crate to render the screen (egui | wgpu | winit | glfw), or just run the emulator in the terminal?
+
+## front
+
 - move all css statements to rust files ? use https://github.com/chinedufn/percy ?
 - center text in keypad buttons
-- find a way to display debugger nicely in the UI
-- find a way to display debugger for touchscreens
+- fix debugger layout in portrait mode, and fix portrait mode more generally
 
-### osef / pinaillage
+## build
+
+- Allow other compilation targets than WASM with conditional compilation and find a crate to render the screen (egui | wgpu | winit | glfw), or just run the emulator in the terminal?
+- package & publish on [wapm](https://wapm.io/)?
+
+## ideas
 
 - Avoid ROM in string format in loading and directly use [read_as_array_buffer](https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.FileReader.html#method.read_as_array_buffer) instead of [read_as_binary_string](https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.FileReader.html#method.read_as_binary_string)
+- add beep sound with [web_sys::AudioContext](https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.AudioContext.html)
 - allow tracing opcodes
-- responsive CSS
 - add error handling to code instead of all the wild unwraps
 - set FPS / emulator speed during runtime
 - add gamepad support with [browser API](https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.GamepadEvent.html) not sure this one makes sense for chip8, but it will definitely be useful for future gaming architectures
