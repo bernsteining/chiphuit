@@ -8,7 +8,7 @@ Yet another chip8 emulator, written in Rust compiled to WASM.
 
 The emulator is hosted online [here](https://chiphuit.glitch.me/) if you want to give it a try without building from sources, you will have to give the emulator the game you want to play, [some chip8 games to download](https://github.com/kripod/chip8-roms/tree/master/games).
 
-You can hide the debugger by pressing `Escape`.
+You can pop the debugger with `Escape` key.
 
 # build & run from sources
 
@@ -89,13 +89,16 @@ Useful links that helped me understand the basics of writing an emulator:
 ### soon
 
 - Write a serde serializer for Emulator from HtmlCollection?
+- Write a Message Queue between the Debugger struct and the Emulator struct to allow debugging
 - package & publish on [wapm](https://wapm.io/)?
 - Add a Hex memory viewer / modifier in hexdump style
 - Finish step button -> Make it call emulatore.cycle() on click
-- Make CSS responsive with media@
 - add beep sound with [web_sys::AudioContext](https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.AudioContext.html)
-- Allow committing modified variables to Emulator with Message queue approach
 - Allow other compilation targets than WASM with conditional compilation and find a crate to render the screen (egui | wgpu | winit | glfw), or just run the emulator in the terminal?
+- move all css statements to rust files ? use https://github.com/chinedufn/percy ?
+- center text in keypad buttons
+- find a way to display debugger nicely in the UI
+- find a way to display debugger for touchscreens
 
 ### osef / pinaillage
 

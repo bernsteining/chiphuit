@@ -1,23 +1,16 @@
-html {
-  background: WhiteSmoke;
-}
 body {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  margin-left: auto;
-  margin-right: auto;
-  text-align: center;
-}
+  height: 100vh;
+  width: 100vw;
 
-canvas {
-  margin: auto;
-  position: float;
-  width: 640px;
-  height: 320px;
-  display: flex;
+  text-align: center;
+  justify-content: center;
+
   /* necessary for neat pixels */
   image-rendering: crisp-edges;
+  background-color: #181a1b;
+
+  /* avoid double tap zoom etc on touch devices */
+  touch-action: none;
 }
 
 /* When moving the mouse over the close custom-file-upload */
@@ -25,23 +18,15 @@ canvas {
   color: black;
 }
 
-.footer {
-  position: fixed;
-  left: 0;
-  bottom: 0;
-  width: 100%;
-  color: black;
-  text-align: center;
-}
-
 .keypad-base {
-  max-width: 300px;
-  border-radius: 10px;
   display: grid;
-  grid-template-columns: repeat(8, 30px);
-  grid-template-rows: repeat(5, 60px);
+  grid-template-rows: repeat(5, auto);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-gap: 5px;
-  margin: 45px auto;
+  grid-auto-columns: 1fr;
+  font-size: 2pc;
+  color: white;
+  cursor: pointer;
 }
 
 .key {
@@ -49,10 +34,7 @@ canvas {
   border: 2px solid black;
   border-radius: 5px;
   grid-column: span 2;
-  font-size: 20px;
-  text-align: center;
-  padding-top: 17px;
-  cursor: pointer;
+  color: white;
   user-select: none;
 }
 
@@ -65,19 +47,8 @@ canvas {
   background-color: darkmagenta;
   border: 2px solid black;
   border-radius: 5px;
-  font-size: 20px;
-  text-align: center;
-  position: flex;
-  display: inline-block;
-  padding: 0px;
-  padding-top: 10px;
-  padding-bottom: 10px;
-  padding-right: 10px;
-  padding-left: 10px;
-  cursor: pointer;
   grid-row: 5;
   grid-column: 1/5;
-  user-select: none;
 }
 
 .breakpoint:hover {
@@ -142,7 +113,7 @@ input[type="file"] {
   right: 0;
   font-size: small;
   border-spacing: 30px 5px;
-  display: table-header-group;
+  display: none;
 }
 
 .debugger_button {
@@ -155,4 +126,41 @@ input[type="file"] {
   outline: none;
   color: white;
   padding: 5px;
+}
+
+@media screen and (orientation: landscape) {
+  body {
+    display: flex;
+    overflow: hidden;
+  }
+  .breakpoint {
+    padding-top: 30%;
+  }
+  .file-upload {
+    padding-top: 20%;
+  }
+}
+
+@media screen and (orientation: portrait) {
+  body {
+    flex-direction: column;
+    display: flex;
+    overflow: hidden;
+  }
+  .canvas {
+    /* height: 40vh; */
+    height: 40vh;
+  }
+  .keypad-base {
+    height: 40vh;
+  }
+  .key {
+    padding-top: 30%;
+  }
+  .breakpoint {
+    padding-top: 20%;
+  }
+  .file-upload {
+    padding-top: 20%;
+  }
 }
