@@ -56,7 +56,7 @@ pub fn set_canvas() -> web_sys::CanvasRenderingContext2d {
 /// let boolean_screen = [true, 64 * 32];
 ///
 /// // turns all the pixels of the Emulator screen on.
-/// draw_screen(context, boolean_screen);
+/// draw_screen(&context, boolean_screen);
 /// ```
 pub fn draw_screen(context: &CanvasRenderingContext2d, boolean_screen: [bool; 64 * 32]) {
     let screen: Vec<u8> = boolean_screen
