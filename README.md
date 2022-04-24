@@ -2,11 +2,13 @@
 
 Yet another chip8 emulator, written in Rust compiled to WASM.
 
-![The emulator running](assets/emulator_landscape.png)
-
 # play
 
 The emulator is hosted online [here](https://chiphuit.glitch.me/) if you want to give it a try without building from sources, you will have to give the emulator the game you want to play, [some chip8 games to download](https://github.com/kripod/chip8-roms/tree/master/games).
+
+The emulator also has a debugger view that allows to see the emulator internal variables. Modifying variables isn't supported yet, but it will be (hopefully) possible in future versions.
+
+![The emulator with the debugger](assets/emulator_debugger.png)
 
 # build & run from sources
 
@@ -66,6 +68,12 @@ Finally, serve the emulator and play it on your favorite browser @ http://127.0.
 basic-http-server build/
 ```
 
+# Demo
+
+Here's a video of the emulator running on an iPhone.
+
+[![The emulator running](https://img.youtube.com/vi/Ix_EGr-9nWQ/maxresdefault.jpg)](https://www.youtube.com/watch?v=Ix_EGr-9nWQ)
+
 # Documentation
 
 Generate & read the documentation of the project
@@ -73,10 +81,6 @@ Generate & read the documentation of the project
 ```bash
 cargo doc --document-private-items --open
 ```
-
-The emulator also has a debugger view that allows to see the emulator internal variables. Modifying variables isn't supported yet, but it will be (hopefully) possible in future versions.
-
-![The emulator with the debugger](assets/emulator_debugger.png)
 
 Useful links that helped me understand the basics of writing an emulator:
 
