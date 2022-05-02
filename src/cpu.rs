@@ -231,6 +231,14 @@ impl Emulator {
         };
     }
 
+    /// Sets the carry to the VF register if needed.
+    fn carry(&self, substraction: i8) -> u8 {
+        match substraction < 0 {
+            true => 0,
+            false => 1,
+        }
+    }
+
     /// Get the value of the Xth register with X being the value of the second
     /// nibble of the opcode.
     fn get_vx(&mut self) -> u8 {
@@ -359,11 +367,7 @@ impl Emulator {
     /// vx -= vy
     fn _8xy5(&mut self) {
         let substraction = (self.get_vx() - self.get_vy()) as i8;
-        if substraction < 0 {
-            self.registers[15] = 0;
-        } else {
-            self.registers[15] = 1;
-        }
+        self.registers[15] = self.carry(substraction);
         self.registers[self.current_opcode.second_nibble as usize] = substraction as u8;
     }
 
@@ -380,10 +384,7 @@ impl Emulator {
     /// vx = vy - vx
     fn _8xy7(&mut self) {
         let substraction = (self.get_vy() - self.get_vx()) as i8;
-        self.registers[15] = match substraction < 0 {
-            true => 0,
-            false => 1,
-        };
+        self.registers[15] = self.carry(substraction);
         self.registers[self.current_opcode.second_nibble as usize] = substraction as u8;
     }
 
