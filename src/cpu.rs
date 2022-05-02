@@ -544,8 +544,8 @@ impl Emulator {
     /// itself is left unmodified
     /// reg_dump(vx, &I)
     fn fx55(&mut self) {
-        for i in 0..self.current_opcode.second_nibble + 1 {
-            self.memory[(self.index_register + i as u16) as usize] = self.registers[i as usize];
+        for i in 0..self.current_opcode.second_nibble as usize + 1 {
+            self.memory[(self.index_register as usize + i)] = self.registers[i];
         }
     }
 
@@ -554,8 +554,8 @@ impl Emulator {
     /// but I itself is left unmodified.
     /// reg_load(vx, &I)
     fn fx65(&mut self) {
-        for i in 0..self.current_opcode.second_nibble + 1 {
-            self.registers[i as usize] = self.memory[(self.index_register + i as u16) as usize];
+        for i in 0..self.current_opcode.second_nibble as usize + 1 {
+            self.registers[i] = self.memory[(self.index_register as usize + i)];
         }
     }
 
