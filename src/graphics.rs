@@ -53,13 +53,13 @@ pub fn set_canvas() -> web_sys::CanvasRenderingContext2d {
 ///
 /// ```
 /// let context = set_canvas();
-/// let boolean_screen = [true, 64 * 32];
+/// let screen = [true, 64 * 32];
 ///
 /// // turns all the pixels of the Emulator screen on.
-/// draw_screen(&context, boolean_screen);
+/// draw_screen(&context, screen);
 /// ```
-pub fn draw_screen(context: &CanvasRenderingContext2d, boolean_screen: [bool; 64 * 32]) {
-    let screen: Vec<u8> = boolean_screen
+pub fn draw_screen(context: &CanvasRenderingContext2d, screen: [bool; 64 * 32]) {
+    let rgba_screen: Vec<u8> = screen
         .iter()
         .flat_map(|x| match x {
             false => [0u8; 4],
@@ -67,7 +67,8 @@ pub fn draw_screen(context: &CanvasRenderingContext2d, boolean_screen: [bool; 64
         })
         .collect();
 
-    let graphic_screen =
-        ImageData::new_with_u8_clamped_array_and_sh(Clamped(&screen), WIDTH, HEIGHT).unwrap();
-    context.put_image_data(&graphic_screen, 0.0, 0.0).unwrap();
+    let frame =
+        ImageData::new_with_u8_clamped_array_and_sh(Clamped(&rgba_screen), WIDTH, HEIGHT).unwrap();
+
+    context.put_image_data(&frame, 0.0, 0.0).unwrap();
 }
