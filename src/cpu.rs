@@ -380,13 +380,11 @@ impl Emulator {
     /// vx = vy - vx
     fn _8xy7(&mut self) {
         let substraction = (self.get_vy() - self.get_vx()) as i8;
-        if substraction < 0 {
-            self.registers[15] = 0;
-            self.registers[self.current_opcode.second_nibble as usize] = substraction as u8;
-        } else {
-            self.registers[15] = 1;
-            self.registers[self.current_opcode.second_nibble as usize] = substraction as u8;
-        }
+        self.registers[15] = match substraction < 0 {
+            true => 0,
+            false => 1,
+        };
+        self.registers[self.current_opcode.second_nibble as usize] = substraction as u8;
     }
 
     /// Stores the most significant bit of VX in VF
