@@ -376,7 +376,7 @@ impl Emulator {
     /// VX to the right by 1.
     /// vx >>= 1
     fn _8xy6(&mut self) {
-        self.registers[15] = 1u8 & self.get_vx();
+        self.registers[15] = 0b00000001 & self.get_vx();
         self.registers[self.current_opcode.second_nibble as usize] >>= 1;
     }
 
