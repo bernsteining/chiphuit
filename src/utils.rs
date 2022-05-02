@@ -36,7 +36,7 @@ pub fn append_element_to_another(element: &web_sys::Node, id: &str) {
     document()
         .get_element_by_id(id)
         .unwrap()
-        .append_child(&element)
+        .append_child(element)
         .unwrap();
 }
 
@@ -80,7 +80,7 @@ pub fn set_callback_to_button(
     keypad: &Rc<RefCell<[bool; 16]>>,
     index: usize,
 ) {
-    let keypad_clone = Rc::clone(&keypad);
+    let keypad_clone = Rc::clone(keypad);
     let mouse_callback = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
         keypad_clone.borrow_mut()[index] = press;
     }) as Box<dyn FnMut(_)>);
@@ -96,7 +96,7 @@ pub fn set_callback_to_button(
         .unwrap();
     mouse_callback.forget();
 
-    let keypad_clone = Rc::clone(&keypad);
+    let keypad_clone = Rc::clone(keypad);
     let touch_callback = Closure::wrap(Box::new(move |_event: web_sys::TouchEvent| {
         keypad_clone.borrow_mut()[index] = press;
     }) as Box<dyn FnMut(_)>);
@@ -121,7 +121,7 @@ pub fn set_callback_to_key(
     keypad: &Rc<RefCell<[bool; 16]>>,
     index: usize,
 ) {
-    let keypad_clone = Rc::clone(&keypad);
+    let keypad_clone = Rc::clone(keypad);
     let callback = Closure::wrap(Box::new(move |_event: web_sys::KeyboardEvent| {
         if _event.key().to_uppercase() == key {
             keypad_clone.borrow_mut()[index] = press;
