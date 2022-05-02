@@ -65,7 +65,7 @@ pub fn main_wasm() -> Result<(), JsValue> {
 
     // EVENT LOOP
     *g.borrow_mut() = Some(Closure::wrap(Box::new(move || {
-        utils::set_timeout(t1.borrow().as_ref().unwrap(), 20);
+        utils::set_timeout(t1.borrow().as_ref().unwrap(), 30);
 
         if !emulator.rom_buffer.borrow_mut().is_empty() {
             emulator.hotswap();
@@ -76,9 +76,8 @@ pub fn main_wasm() -> Result<(), JsValue> {
                 emulator.cycle();
             }
             emulator.update_emulator_state(&debugger.element.rows());
+            graphics::draw_screen(&canvas, emulator.screen);
         }
-
-        graphics::draw_screen(&canvas, emulator.screen);
     }) as Box<dyn FnMut()>));
 
     graphics::request_animation_frame(g.borrow().as_ref().unwrap());
