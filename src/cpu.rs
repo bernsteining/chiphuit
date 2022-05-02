@@ -391,7 +391,7 @@ impl Emulator {
     /// and then shifts VX to the left by 1.
     /// vx <<= 1
     fn _8xye(&mut self) {
-        self.registers[15] = 128 & self.get_vx();
+        self.registers[15] = 0b10000000 & self.get_vx();
         self.registers[self.current_opcode.second_nibble as usize] <<= 1;
     }
 
