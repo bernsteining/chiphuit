@@ -435,17 +435,16 @@ impl Emulator {
     /// draw(vx, vy, N)
     fn dxyn(&mut self) {
         let height = self.current_opcode.fourth_nibble;
-        let x = self.get_vx();
-        let y = self.get_vy();
+        let x = self.get_vx() as u16;
+        let y = self.get_vy() as u16;
         let mut collision = false;
 
-        for row in 0..height {
+        for row in 0..height as u16 {
             let row_pixels: [bool; 8] =
                 u8_to_bools(self.memory[(self.index_register as usize) + row as usize]);
 
             for i in 0..8 {
-                let index = (x as u16 + i as u16 + (y as u16 + row as u16) * 64) as usize;
-
+                let index = (x  + i + (y + row) * 64) as usize;
                 let previous_state = self.screen[index];
                 self.screen[index] ^= row_pixels[i as usize];
 
@@ -454,11 +453,10 @@ impl Emulator {
                 }
             }
         }
-        if collision {
-            self.registers[15] = 1;
-        } else {
-            self.registers[15] = 0;
-        }
+        self.registers[15] = match collision {
+            true => 1,
+            false => 0,
+        };
     }
 
     /// Skips the next instruction if the key stored in VX is pressed.
