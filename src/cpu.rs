@@ -1,5 +1,5 @@
 //! # A module to emulate the chip8 architecture, and process its opcodes logic.
-use js_sys::Math::random;
+use rand::Rng;
 use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
@@ -422,8 +422,9 @@ impl Emulator {
     /// Sets VX to the result of a bitwise and operation on a random number
     /// (Typically: 0 to 255) and NN. vx = rand() & NN
     fn cxnn(&mut self) {
+        let mut rng = rand::thread_rng();
         self.registers[self.current_opcode.second_nibble as usize] =
-            ((random() * 255.0) as u8) & self.current_opcode.get_third_and_fourth_nibbles_inline();
+            rng.gen::<u8>() & self.current_opcode.get_third_and_fourth_nibbles_inline();
     }
 
     /// Draws a sprite at coordinate (VX, VY) that has a width of 8 pixels and
