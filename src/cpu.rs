@@ -221,7 +221,7 @@ impl Emulator {
     /// Fetches `Emulator` opcodes from memory in order to process them.
     fn fetch_opcode(&mut self) {
         let opcode = (self.memory[self.program_counter as usize] as u16) << 8
-            | self.memory[(self.program_counter as usize + 1) as usize] as u16;
+            | self.memory[self.program_counter as usize + 1] as u16;
 
         self.current_opcode = OpCode {
             first_nibble: ((opcode & 0xF000) >> 12) as u8,
