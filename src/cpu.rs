@@ -356,9 +356,10 @@ impl Emulator {
     /// vx += vy
     fn _8xy4(&mut self) {
         let sum = (self.get_vx() + self.get_vy()) as u16;
-        if sum > 255 {
-            self.registers[15] = 1;
-        }
+        self.registers[15] = match sum > 255 {
+            true => 1,
+            false => 0,
+        };
         self.registers[self.current_opcode.second_nibble as usize] += self.get_vy();
     }
 
