@@ -57,11 +57,9 @@ pub fn set_breakpoint(emulator_breakpoint: &Rc<RefCell<bool>>) {
     breakpoint.set_id("breakpoint");
     breakpoint.set_class_name("breakpoint");
     breakpoint.set_inner_html("⏯");
-
     append_element_to_another(&breakpoint, "keypad");
 
-    let breakpoint_clone = Rc::clone(&emulator_breakpoint);
-
+    let breakpoint_clone = Rc::clone(emulator_breakpoint);
     let closure = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
         *breakpoint_clone.borrow_mut() ^= true;
     }) as Box<dyn FnMut(_)>);
@@ -95,8 +93,8 @@ pub fn set_debug() {
 /// Set the button to allow the user to supply a ROM to the `Emulator`.
 pub fn set_file_reader(rom_buffer: &Rc<RefCell<Vec<u8>>>) {
     let filereader = FileReader::new().unwrap().dyn_into::<FileReader>().unwrap();
-    let rom = Rc::clone(&rom_buffer);
 
+    let rom = Rc::clone(rom_buffer);
     let onload = Closure::wrap(Box::new(move |event: Event| {
         let file = event
             .target()
