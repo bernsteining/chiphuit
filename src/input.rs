@@ -90,13 +90,35 @@ pub fn set_debug() {
     closure.forget()
 }
 
-/// Set the button to allow the user to supply a ROM to the `Emulator`.
-pub fn set_file_reader(rom_buffer: &Rc<RefCell<Vec<u8>>>) {
-    let filereader = FileReader::new().unwrap().dyn_into::<FileReader>().unwrap();
+/// Set button for rom selection.
+pub fn set_file_upload_button() {
+    let fileinput: HtmlInputElement = document()
+        .create_element("input")
+        .unwrap()
+        .dyn_into::<HtmlInputElement>()
+        .unwrap();
 
+    fileinput.set_id("file-upload");
+    fileinput.set_type("file");
+    append_to_body(&fileinput);
+
+    let label: HtmlLabelElement = document()
+        .create_element("label")
+        .unwrap()
+        .dyn_into::<HtmlLabelElement>()
+        .unwrap();
+
+    label.set_html_for("file-upload");
+    label.set_inner_text("Select ROM");
+    label.set_class_name("file-upload");
+    append_element_to_another(&label, "keypad");
+}
+
+/// Closure to load user input ROM in the Emulator.
+pub fn load_user_rom(rom_buffer: &Rc<RefCell<Vec<u8>>>) -> Closure<dyn FnMut(Event)> {
     let rom = Rc::clone(rom_buffer);
-    let onload = Closure::wrap(Box::new(move |event: Event| {
-        let file = event
+    Closure::wrap(Box::new(move |event: Event| {
+        *rom.borrow_mut() = event
             .target()
             .unwrap()
             .dyn_into::<FileReader>()
@@ -108,49 +130,43 @@ pub fn set_file_reader(rom_buffer: &Rc<RefCell<Vec<u8>>>) {
             .iter()
             .map(|x| x as u8)
             .collect();
+    }))
+}
 
-        *rom.borrow_mut() = file;
-    }) as Box<dyn FnMut(_)>);
+/// Closure to read user input ROM.
+pub fn read_user_rom(filereader: FileReader) -> Closure<dyn FnMut(Event)> {
+    Closure::wrap(Box::new(move |event: Event| {
+        let file = event
+            .target()
+            .unwrap()
+            .dyn_into::<HtmlInputElement>()
+            .unwrap()
+            .files()
+            .unwrap()
+            .get(0)
+            .unwrap();
 
-    filereader.set_onloadend(Some(onload.as_ref().unchecked_ref()));
-    onload.forget();
+        filereader.read_as_binary_string(&file).unwrap();
+    }) as Box<dyn FnMut(_)>)
+}
 
-    let fileinput: HtmlInputElement = document()
-        .create_element("input")
+/// Set the button to allow the user to supply a ROM to the `Emulator`.
+pub fn set_file_reader(rom_buffer: &Rc<RefCell<Vec<u8>>>) {
+    let file_input = document()
+        .get_element_by_id("file-upload")
         .unwrap()
         .dyn_into::<HtmlInputElement>()
         .unwrap();
 
-    fileinput.set_id("file-upload");
-    fileinput.set_type("file");
+    let file_reader = FileReader::new().unwrap().dyn_into::<FileReader>().unwrap();
 
-    let label: HtmlLabelElement = document()
-        .create_element("label")
-        .unwrap()
-        .dyn_into::<HtmlLabelElement>()
+    let handle_load_event = load_user_rom(rom_buffer);
+    file_reader.set_onloadend(Some(handle_load_event.as_ref().unchecked_ref()));
+    handle_load_event.forget();
+
+    let handle_read_event = read_user_rom(file_reader);
+    file_input
+        .add_event_listener_with_callback("change", handle_read_event.as_ref().unchecked_ref())
         .unwrap();
-
-    label.set_html_for("file-upload");
-    label.set_inner_text("Select ROM");
-    label.set_class_name("file-upload");
-
-    append_element_to_another(&label, "keypad");
-    append_to_body(&fileinput);
-
-    let callback = Closure::wrap(Box::new(move |event: Event| {
-        let element = event
-            .target()
-            .unwrap()
-            .dyn_into::<HtmlInputElement>()
-            .unwrap();
-        let filelist = element.files().unwrap();
-
-        let _file = filelist.get(0).expect("should have a file handle.");
-        filereader.read_as_binary_string(&_file).unwrap();
-    }) as Box<dyn FnMut(_)>);
-    fileinput
-        .add_event_listener_with_callback("change", callback.as_ref().unchecked_ref())
-        .unwrap();
-
-    callback.forget();
+    handle_read_event.forget();
 }
