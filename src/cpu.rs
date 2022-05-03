@@ -445,7 +445,7 @@ impl Emulator {
                 u8_to_bools(self.memory[(self.index_register as usize) + row as usize]);
 
             for i in 0..8 {
-                let index = (x  + i + (y + row) * 64) as usize;
+                let index = (x + i + (y + row) * 64) as usize;
                 let previous_state = self.screen[index];
                 self.screen[index] ^= row_pixels[i as usize];
 
