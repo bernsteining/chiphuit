@@ -5,7 +5,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{HtmlElement, HtmlTableCellElement, HtmlTableRowElement};
+use web_sys::{HtmlElement, HtmlTableCellElement, HtmlTableRowElement, window};
 
 /// An `Emulator` debugger.
 pub struct Debugger {
@@ -17,9 +17,20 @@ impl Debugger {
     pub fn new(emulator: &Emulator) -> Debugger {
         let debugger = create_element();
         fill_rows(&debugger);
+
+        // 1st row
         edit(&debugger);
         commit(&debugger);
-        step_and_trace(&debugger, &emulator.tracing);
+
+        // 2nd row
+        trace(&debugger, &emulator.tracing);
+        copy(&debugger, emulator);
+
+        // 3rd row
+        load(&debugger, emulator);
+        dump(&debugger, emulator);
+
+        // last row
         set_breakpoint_and_keypad_view(&debugger);
         Debugger { element: debugger }
     }
@@ -69,34 +80,21 @@ fn fill_rows(element: &web_sys::HtmlTableElement) {
     }
 }
 
-/// Add step and trace buttons to `Debugger`.
-fn step_and_trace(element: &web_sys::HtmlTableElement, tracing: &Rc<RefCell<bool>>) {
-    let modify_emulator_row = element
+/// Activate tracing mode of the VM, allowing to save the VM's internal state
+/// at each CPU cycle, and to save it in JSON format.
+fn trace(element: &web_sys::HtmlTableElement, tracing: &Rc<RefCell<bool>>) {
+    let row = element
         .insert_row()
         .unwrap()
         .dyn_into::<web_sys::HtmlTableRowElement>()
         .unwrap();
 
-    let step = modify_emulator_row.insert_cell().unwrap();
-
-    let trace = modify_emulator_row.insert_cell().unwrap();
-
-    step.set_class_name("debugger_button");
-    step.set_id("step");
-    step.set_inner_html("step");
+    let trace = row.insert_cell().unwrap();
 
     trace.set_class_name("debugger_button");
     trace.set_inner_html("trace");
 
-    let step_callback = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
-        // this should run cycle() on the `Emulator`.
-    }) as Box<dyn FnMut(_)>);
-
-    step.add_event_listener_with_callback("mousedown", step_callback.as_ref().unchecked_ref())
-        .unwrap();
-    step_callback.forget();
-
-    let trace_clone = Rc::clone(&tracing);
+    let trace_clone = Rc::clone(tracing);
     let trace_callback = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
         *trace_clone.borrow_mut() ^= true;
     }) as Box<dyn FnMut(_)>);
@@ -106,6 +104,68 @@ fn step_and_trace(element: &web_sys::HtmlTableElement, tracing: &Rc<RefCell<bool
         .unwrap();
     trace_callback.forget();
 }
+
+/// Copy the current VM state in JSON format to clipboard.
+fn copy(element: &web_sys::HtmlTableElement, emulator: &Emulator) {
+    let rows = element.rows();
+
+    let copy = rows
+        .get_with_index(rows.length() - 1)
+        .unwrap()
+        .dyn_into::<web_sys::HtmlTableRowElement>()
+        .unwrap()
+        .insert_cell()
+        .unwrap();
+
+    copy.set_class_name("debugger_button");
+    copy.set_inner_html("copy to 📋");
+
+    let vm_state = serde_json::to_string_pretty(&emulator).unwrap();
+    let copy_callback = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
+        window().unwrap().navigator().clipboard().unwrap().write_text(&vm_state);
+    }) as Box<dyn FnMut(_)>);
+
+    copy
+        .add_event_listener_with_callback("mousedown", copy_callback.as_ref().unchecked_ref())
+        .unwrap();
+    copy_callback.forget();
+}
+
+/// Load a JSON VM state in the `Emulator`.
+fn load(element: &web_sys::HtmlTableElement, emulator: &Emulator){
+    let row = element
+        .insert_row()
+        .unwrap()
+        .dyn_into::<web_sys::HtmlTableRowElement>()
+        .unwrap();
+
+    let trace = row.insert_cell().unwrap();
+
+    trace.set_class_name("debugger_button");
+    trace.set_inner_html("load");
+}
+
+/// Save all the traced VM states in JSON format to your disk.
+fn dump(element: &web_sys::HtmlTableElement, emulator: &Emulator){
+
+    // should pop a file dialog on click so the user can choose a path
+    // where to save the JSON.
+
+    let rows = element.rows();
+
+    let dump = rows
+        .get_with_index(rows.length() - 1)
+        .unwrap()
+        .dyn_into::<web_sys::HtmlTableRowElement>()
+        .unwrap()
+        .insert_cell()
+        .unwrap();
+
+        dump.set_class_name("debugger_button");
+        dump.set_inner_html("dump");
+
+}
+
 
 /// Set callbacks to allow modification of the `Emulator`'s fields.
 fn edit(element: &web_sys::HtmlTableElement) {
@@ -226,7 +286,7 @@ fn set_breakpoint_and_keypad_view(element: &web_sys::HtmlTableElement) {
     }) as Box<dyn FnMut(_)>);
 
     breakpoint
-        .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+        .add_event_listener_with_callback("mousedown", closure.as_ref().unchecked_ref())
         .unwrap();
     closure.forget();
 
@@ -239,7 +299,7 @@ fn set_breakpoint_and_keypad_view(element: &web_sys::HtmlTableElement) {
     let closure = change_view();
 
     keypad
-        .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+        .add_event_listener_with_callback("mousedown", closure.as_ref().unchecked_ref())
         .unwrap();
     closure.forget()
 }

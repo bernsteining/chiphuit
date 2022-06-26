@@ -1,5 +1,6 @@
 [build]
 target = "wasm32-unknown-unknown"
+rustflags=["--cfg=web_sys_unstable_apis"]
 
 [profile.release]
 # Tell `rustc` to optimize for small code size.

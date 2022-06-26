@@ -98,12 +98,12 @@ Useful links that helped me understand the basics of writing an emulator:
 - Write a serde serializer for Emulator from HtmlCollection?
 - Write a Message Queue between the Debugger struct and the Emulator struct to allow debugging
 - Finish step button -> Make it call emulatore.cycle() on click
+- To make it `Emulator` agnostic, it should take as argument a Serialized `Emulator` struct, then `fill_rows` should iterate over the values of the Serialized `Emulator`.
 
 ### tracing
 - Add trace / dump (save trace) buttons to debugger
 - Define Closure & callback (with https://developer.mozilla.org/en-US/docs/Web/API/FileSystemWritableFileStream ?)
 - Allow loading trace state into Emulator (Deserialize Trait from html table)
-- Add clipboard button to save in clipboard current VM state in JSON
 
 ## front
 
