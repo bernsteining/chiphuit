@@ -109,6 +109,7 @@ input[type="file"] {
   border-spacing: 30px 5px;
   display: none;
   color: white;
+  max-width: min-content;
 }
 
 .debugger_button {
