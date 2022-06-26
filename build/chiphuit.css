@@ -31,6 +31,9 @@ body {
   grid-column: auto;
   color: white;
   user-select: none;
+  align-items:center;
+  display: flex;
+  justify-content: center;
 }
 
 .key:hover {
@@ -44,6 +47,9 @@ body {
   border-radius: 5px;
   grid-row: 5;
   grid-column: span 1;
+  align-items:center;
+  display: flex;
+  justify-content: center;
 }
 
 .breakpoint:hover {
@@ -62,6 +68,9 @@ body {
   -webkit-transition-duration: 0.4s; /* Safari */
   transition-duration: 0.4s;
   overflow: hidden;
+  align-items:center;
+  display: flex;
+  justify-content: center;
 }
 
 .file-upload:hover {
@@ -101,6 +110,9 @@ input[type="file"] {
   border-radius: 5px;
   grid-row: 5;
   grid-column: span 1;
+  align-items:center;
+  display: flex;
+  justify-content: center;
 }
 
 .debugger {
@@ -123,6 +135,7 @@ input[type="file"] {
   color: white;
   background-color: darkmagenta;
   padding: 5px;
+  text-align: center;
 }
 
 .debugger_button:hover {
