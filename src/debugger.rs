@@ -1,5 +1,8 @@
 //! # A module to view and modify the `Emulator` variables in the GUI.
+use crate::cpu::Emulator;
 use crate::utils::{append_to_body, change_view, document, EMULATOR_VARIABLES};
+use std::cell::RefCell;
+use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{HtmlElement, HtmlTableCellElement, HtmlTableRowElement};
@@ -11,12 +14,12 @@ pub struct Debugger {
 
 impl Debugger {
     /// Instanciate `Debugger` in the GUI with all necessary callbacks.
-    pub fn new() -> Debugger {
+    pub fn new(emulator: &Emulator) -> Debugger {
         let debugger = create_element();
         fill_rows(&debugger);
-        step_and_memory(&debugger);
         edit(&debugger);
         commit(&debugger);
+        step_and_trace(&debugger, &emulator.tracing);
         set_breakpoint_and_keypad_view(&debugger);
         Debugger { element: debugger }
     }
@@ -66,8 +69,8 @@ fn fill_rows(element: &web_sys::HtmlTableElement) {
     }
 }
 
-/// Add step and memory viewer buttons to `Debugger`.
-fn step_and_memory(element: &web_sys::HtmlTableElement) {
+/// Add step and trace buttons to `Debugger`.
+fn step_and_trace(element: &web_sys::HtmlTableElement, tracing: &Rc<RefCell<bool>>) {
     let modify_emulator_row = element
         .insert_row()
         .unwrap()
@@ -76,14 +79,14 @@ fn step_and_memory(element: &web_sys::HtmlTableElement) {
 
     let step = modify_emulator_row.insert_cell().unwrap();
 
-    let memory_viewer = modify_emulator_row.insert_cell().unwrap();
+    let trace = modify_emulator_row.insert_cell().unwrap();
 
     step.set_class_name("debugger_button");
     step.set_id("step");
     step.set_inner_html("step");
 
-    memory_viewer.set_class_name("debugger_button");
-    memory_viewer.set_inner_html("memory viewer");
+    trace.set_class_name("debugger_button");
+    trace.set_inner_html("trace");
 
     let step_callback = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
         // this should run cycle() on the `Emulator`.
@@ -93,18 +96,15 @@ fn step_and_memory(element: &web_sys::HtmlTableElement) {
         .unwrap();
     step_callback.forget();
 
-    let memory_viewer_callback = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
-        // this should show a memory viewer in hexdump style of the
-        // `Emulator` struct.
+    let trace_clone = Rc::clone(&tracing);
+    let trace_callback = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
+        *trace_clone.borrow_mut() ^= true;
     }) as Box<dyn FnMut(_)>);
 
-    memory_viewer
-        .add_event_listener_with_callback(
-            "mousedown",
-            memory_viewer_callback.as_ref().unchecked_ref(),
-        )
+    trace
+        .add_event_listener_with_callback("mousedown", trace_callback.as_ref().unchecked_ref())
         .unwrap();
-    memory_viewer_callback.forget();
+    trace_callback.forget();
 }
 
 /// Set callbacks to allow modification of the `Emulator`'s fields.

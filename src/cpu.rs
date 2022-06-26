@@ -6,6 +6,16 @@ use std::rc::Rc;
 use wasm_bindgen::JsCast;
 use web_sys::{console, HtmlCollection, HtmlTableRowElement};
 
+use serde::{Serialize, Deserialize};
+
+use crate::utils::arrays;
+
+#[derive(Serialize, Debug)]
+struct TypeWithConstGenericArray<const N: usize> {
+    #[serde(with = "arrays")]
+    arr: [u8; N],
+}
+
 /// Chip8 fonts set.
 pub const FONTS: [u8; 80] = [
     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -27,6 +37,7 @@ pub const FONTS: [u8; 80] = [
 ];
 
 /// A struct to access a chip8's opcodes nibbles.
+#[derive(Serialize, Deserialize)]
 pub struct OpCode {
     pub first_nibble: u8,
     pub second_nibble: u8,
@@ -63,27 +74,37 @@ impl fmt::Display for OpCode {
 }
 
 ///  A struct containing all the fields necessary to emulate chip8.
+#[derive(Serialize, Deserialize)]
 pub struct Emulator {
-    pub current_opcode: OpCode,
-    memory: [u8; 4096],
+    current_opcode: OpCode,
 
     registers: [u8; 16],
     index_register: u16,
     program_counter: u16,
 
-    pub screen: [bool; 64 * 32],
-
-    pub stack: [u16; 16],
+    stack: [u16; 16],
     stack_pointer: usize,
 
     delay_timer: u8,
     sound_timer: u8,
 
+    #[serde(with = "arrays")]
+    pub screen: [bool; 64 * 32],
+
+    #[serde(with = "arrays")]
+    memory: [u8; 4096],
+
+    #[serde(skip)]
     pub keypad: Rc<RefCell<[bool; 16]>>,
 
+    #[serde(skip)]
     pub rom_buffer: Rc<RefCell<Vec<u8>>>,
 
+    #[serde(skip)]
     pub running: Rc<RefCell<bool>>,
+
+    #[serde(skip)]
+    pub tracing: Rc<RefCell<bool>>,
 }
 
 /// Print trait to display an `Emulator`'s specific fields into the debugger
@@ -147,9 +168,9 @@ impl Emulator {
 
             keypad: Rc::new(RefCell::new([false; 16])),
 
-            running: Rc::new(RefCell::new(false)),
-
             rom_buffer: Rc::new(RefCell::new(Vec::new())),
+            running: Rc::new(RefCell::new(false)),
+            tracing: Rc::new(RefCell::new(false)),
         }
     }
 

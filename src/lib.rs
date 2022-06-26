@@ -26,6 +26,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
+use web_sys::console;
 
 mod cpu;
 mod debugger;
@@ -45,9 +46,10 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 pub fn main_wasm() -> Result<(), JsValue> {
     utils::set_document();
     let canvas = graphics::set_canvas();
-    let debugger = debugger::Debugger::new();
     let mut emulator = cpu::Emulator::new();
     emulator.load_font();
+
+    let debugger = debugger::Debugger::new(&emulator);
 
     input::set_keypad(&emulator.keypad);
     input::set_breakpoint(&emulator.running);
@@ -73,6 +75,11 @@ pub fn main_wasm() -> Result<(), JsValue> {
         }
 
         if *emulator.running.borrow() {
+            if *emulator.tracing.borrow() {
+                console::log_1(
+                    &format!("{}", serde_json::to_string_pretty(&emulator).unwrap()).into(),
+                );
+            }
             for _ in 0..10 {
                 emulator.cycle();
             }
