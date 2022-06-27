@@ -6,7 +6,7 @@ use std::rc::Rc;
 use wasm_bindgen::JsCast;
 use web_sys::{console, HtmlCollection, HtmlTableRowElement};
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use crate::utils::arrays;
 
