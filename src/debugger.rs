@@ -5,34 +5,51 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{HtmlElement, HtmlTableCellElement, HtmlTableRowElement, window};
+use web_sys::{window, HtmlElement, HtmlTableCellElement, HtmlTableRowElement};
 
 /// An `Emulator` debugger.
 pub struct Debugger {
     pub element: web_sys::HtmlTableElement,
+    pub current_state: Rc<RefCell<String>>,
+    pub states: Rc<RefCell<Vec<String>>>,
 }
 
 impl Debugger {
-    /// Instanciate `Debugger` in the GUI with all necessary callbacks.
-    pub fn new(emulator: &Emulator) -> Debugger {
+    /// Returns a Debugger that can be paired to an Emulator.
+    ///
+    /// # Arguments
+    ///
+    /// * `element` - A HTMLTableElement to render the Debugger in the GUI.
+    /// * `current_state` - Serialized Emulator snapshot during runtime.
+    /// * `states` - Stacked serialized Emulator snapshots, when tracing.
+    pub fn new() -> Debugger {
         let debugger = create_element();
-        fill_rows(&debugger);
+
+        Debugger {
+            element: debugger,
+            current_state: Rc::new(RefCell::new(String::new())),
+            states: Rc::new(RefCell::new(Vec::new())),
+        }
+    }
+
+    /// Fill the Debugger elements in the GUI.
+    pub fn set_debugger(self: &Debugger, emulator: &Emulator) {
+        fill_rows(&self.element);
 
         // 1st row
-        edit(&debugger);
-        commit(&debugger);
+        edit(&self.element);
+        commit(&self.element);
 
         // 2nd row
-        trace(&debugger, &emulator.tracing);
-        copy(&debugger, emulator);
+        trace(&self.element, &emulator.tracing);
+        copy(&self.element, &self.current_state);
 
         // 3rd row
-        load(&debugger, emulator);
-        dump(&debugger, emulator);
+        load(&self.element, emulator);
+        dump(self);
 
         // last row
-        set_breakpoint_and_keypad_view(&debugger);
-        Debugger { element: debugger }
+        set_breakpoint_and_keypad_view(&self.element);
     }
 }
 
@@ -106,7 +123,7 @@ fn trace(element: &web_sys::HtmlTableElement, tracing: &Rc<RefCell<bool>>) {
 }
 
 /// Copy the current VM state in JSON format to clipboard.
-fn copy(element: &web_sys::HtmlTableElement, emulator: &Emulator) {
+fn copy(element: &web_sys::HtmlTableElement, state: &Rc<RefCell<String>>) {
     let rows = element.rows();
 
     let copy = rows
@@ -120,19 +137,23 @@ fn copy(element: &web_sys::HtmlTableElement, emulator: &Emulator) {
     copy.set_class_name("debugger_button");
     copy.set_inner_html("copy to 📋");
 
-    let vm_state = serde_json::to_string_pretty(&emulator).unwrap();
+    let state_clone = Rc::clone(state);
     let copy_callback = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
-        window().unwrap().navigator().clipboard().unwrap().write_text(&vm_state);
+        window()
+            .unwrap()
+            .navigator()
+            .clipboard()
+            .unwrap()
+            .write_text(&state_clone.borrow().to_string());
     }) as Box<dyn FnMut(_)>);
 
-    copy
-        .add_event_listener_with_callback("mousedown", copy_callback.as_ref().unchecked_ref())
+    copy.add_event_listener_with_callback("mousedown", copy_callback.as_ref().unchecked_ref())
         .unwrap();
     copy_callback.forget();
 }
 
 /// Load a JSON VM state in the `Emulator`.
-fn load(element: &web_sys::HtmlTableElement, emulator: &Emulator){
+fn load(element: &web_sys::HtmlTableElement, emulator: &Emulator) {
     let row = element
         .insert_row()
         .unwrap()
@@ -143,15 +164,16 @@ fn load(element: &web_sys::HtmlTableElement, emulator: &Emulator){
 
     trace.set_class_name("debugger_button");
     trace.set_inner_html("load");
+
+    // todo: instanciate an Emulator with Deserialization from JSON.
 }
 
 /// Save all the traced VM states in JSON format to your disk.
-fn dump(element: &web_sys::HtmlTableElement, emulator: &Emulator){
-
+fn dump(debugger: &Debugger) {
     // should pop a file dialog on click so the user can choose a path
     // where to save the JSON.
 
-    let rows = element.rows();
+    let rows = debugger.element.rows();
 
     let dump = rows
         .get_with_index(rows.length() - 1)
@@ -161,11 +183,11 @@ fn dump(element: &web_sys::HtmlTableElement, emulator: &Emulator){
         .insert_cell()
         .unwrap();
 
-        dump.set_class_name("debugger_button");
-        dump.set_inner_html("dump");
+    dump.set_class_name("debugger_button");
+    dump.set_inner_html("dump");
 
+    // todo: Serialize Debugger.states to JSON and allow to it save on disk.
 }
-
 
 /// Set callbacks to allow modification of the `Emulator`'s fields.
 fn edit(element: &web_sys::HtmlTableElement) {

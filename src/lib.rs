@@ -26,7 +26,6 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
-use web_sys::console;
 
 mod cpu;
 mod debugger;
@@ -49,7 +48,8 @@ pub fn main_wasm() -> Result<(), JsValue> {
     let mut emulator = cpu::Emulator::new();
     emulator.load_font();
 
-    let debugger = debugger::Debugger::new(&emulator);
+    let debugger = debugger::Debugger::new();
+    debugger.set_debugger(&emulator);
 
     input::set_keypad(&emulator.keypad);
     input::set_breakpoint(&emulator.running);
@@ -70,18 +70,23 @@ pub fn main_wasm() -> Result<(), JsValue> {
     *g.borrow_mut() = Some(Closure::wrap(Box::new(move || {
         utils::set_timeout(t1.borrow().as_ref().unwrap(), 30);
 
-        if !emulator.rom_buffer.borrow_mut().is_empty() {
+        if !emulator.rom_buffer.borrow().is_empty() {
             emulator.hotswap();
         }
 
         if *emulator.running.borrow() {
-            if *emulator.tracing.borrow() {
-                console::log_1(
-                    &format!("{}", serde_json::to_string_pretty(&emulator).unwrap()).into(),
-                );
-            }
             for _ in 0..10 {
                 emulator.cycle();
+                let state_clone = Rc::clone(&debugger.current_state);
+                *debugger.current_state.borrow_mut() =
+                    serde_json::to_string_pretty(&emulator).unwrap();
+
+                if *emulator.tracing.borrow() {
+                    debugger
+                        .states
+                        .borrow_mut()
+                        .push(state_clone.borrow().to_string());
+                }
             }
             emulator.update_emulator_state(&debugger.element.rows());
             graphics::draw_screen(&canvas, emulator.screen);
