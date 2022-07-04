@@ -105,6 +105,9 @@ pub struct Emulator {
 
     #[serde(skip)]
     pub tracing: Rc<RefCell<bool>>,
+
+    #[serde(skip)]
+    pub load_state: Rc<RefCell<Option<Emulator>>>,
 }
 
 /// Print trait to display an `Emulator`'s specific fields into the debugger
@@ -171,6 +174,7 @@ impl Emulator {
             rom_buffer: Rc::new(RefCell::new(Vec::new())),
             running: Rc::new(RefCell::new(false)),
             tracing: Rc::new(RefCell::new(false)),
+            load_state: Rc::new(RefCell::new(None::<Emulator>)),
         }
     }
 
@@ -222,6 +226,30 @@ impl Emulator {
         self.sound_timer = 0;
 
         self.load_rom();
+    }
+
+    /// Hotswaps the Emulator state with the JSON snapshot provided by
+    /// the user.
+    pub fn hotswap_state(&mut self) {
+        let emulator_clone = Rc::clone(&self.load_state);
+        let emulator_borrow = emulator_clone.borrow();
+        let new_emulator = (emulator_borrow.as_ref()).unwrap();
+
+        self.memory = new_emulator.memory;
+        self.screen = new_emulator.screen;
+        self.registers = new_emulator.registers;
+        self.index_register = new_emulator.index_register;
+        self.program_counter = new_emulator.program_counter;
+        self.stack = new_emulator.stack;
+        self.stack_pointer = new_emulator.stack_pointer;
+        self.delay_timer = new_emulator.delay_timer;
+        self.sound_timer = new_emulator.sound_timer;
+
+        // at the moment loading a VM state only works once
+        // since the ref to the load_state is dropped
+        // todo: make it possible to hotswap a VM snapshot twice
+        // during a runtime
+        self.load_state = Rc::new(RefCell::new(None::<Emulator>));
     }
 
     /// Decrements `Emulator` timers.

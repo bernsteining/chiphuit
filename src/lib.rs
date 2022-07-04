@@ -90,6 +90,10 @@ pub fn main_wasm() -> Result<(), JsValue> {
             }
             emulator.update_emulator_state(&debugger.element.rows());
             graphics::draw_screen(&canvas, emulator.screen);
+
+            if emulator.load_state.borrow().is_some() {
+                emulator.hotswap_state();
+            }
         }
     }) as Box<dyn FnMut()>));
 

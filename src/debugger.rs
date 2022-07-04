@@ -1,11 +1,17 @@
 //! # A module to view and modify the `Emulator` variables in the GUI.
 use crate::cpu::Emulator;
-use crate::utils::{append_to_body, change_view, document, EMULATOR_VARIABLES};
+use crate::utils::{
+    append_element_to_another, append_to_body, change_view, document, EMULATOR_VARIABLES,
+};
+use js_sys::JsString;
 use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{window, HtmlElement, HtmlTableCellElement, HtmlTableRowElement};
+use web_sys::{
+    console, window, Event, FileReader, HtmlElement, HtmlInputElement, HtmlLabelElement,
+    HtmlTableCellElement, HtmlTableRowElement,
+};
 
 /// An `Emulator` debugger.
 pub struct Debugger {
@@ -45,7 +51,8 @@ impl Debugger {
         copy(&self.element, &self.current_state);
 
         // 3rd row
-        load(&self.element, emulator);
+        load(&self.element);
+        set_load_file_reader(&emulator.load_state);
         dump(self);
 
         // last row
@@ -153,19 +160,99 @@ fn copy(element: &web_sys::HtmlTableElement, state: &Rc<RefCell<String>>) {
 }
 
 /// Load a JSON VM state in the `Emulator`.
-fn load(element: &web_sys::HtmlTableElement, emulator: &Emulator) {
+fn load(element: &web_sys::HtmlTableElement) {
     let row = element
         .insert_row()
         .unwrap()
         .dyn_into::<web_sys::HtmlTableRowElement>()
         .unwrap();
 
-    let trace = row.insert_cell().unwrap();
+    let load = row.insert_cell().unwrap();
 
-    trace.set_class_name("debugger_button");
-    trace.set_inner_html("load");
+    load.set_id("load");
+    load.set_class_name("debugger_button");
 
-    // todo: instanciate an Emulator with Deserialization from JSON.
+    let fileinput: HtmlInputElement = document()
+        .create_element("input")
+        .unwrap()
+        .dyn_into::<HtmlInputElement>()
+        .unwrap();
+
+    fileinput.set_id("load_upload");
+    fileinput.set_type("file");
+    append_element_to_another(&fileinput, "load");
+
+    let label: HtmlLabelElement = document()
+        .create_element("label")
+        .unwrap()
+        .dyn_into::<HtmlLabelElement>()
+        .unwrap();
+
+    label.set_html_for("load_upload");
+    label.set_inner_text("load");
+    append_element_to_another(&label, "load");
+}
+
+/// Set the button to allow the user to supply a VM state to the `Emulator`.
+pub fn set_load_file_reader(emulator_load_state: &Rc<RefCell<Option<Emulator>>>) {
+    let file_input = document().get_element_by_id("load").unwrap();
+    // file_input.clone().dyn_into::<HtmlInputElement>().unwrap().set_type("file");
+    let file_reader = FileReader::new().unwrap().dyn_into::<FileReader>().unwrap();
+
+    let handle_load_event = load_user_state(emulator_load_state);
+    file_reader.set_onloadend(Some(handle_load_event.as_ref().unchecked_ref()));
+    handle_load_event.forget();
+
+    let handle_read_event = read_user_state(file_reader);
+    file_input
+        .add_event_listener_with_callback("change", handle_read_event.as_ref().unchecked_ref())
+        .unwrap();
+    handle_read_event.forget();
+}
+
+/// Closure to load user input VM state in the Emulator.
+pub fn load_user_state(
+    emulator_load_state: &Rc<RefCell<Option<Emulator>>>,
+) -> Closure<dyn FnMut(Event)> {
+    let load_state = Rc::clone(emulator_load_state);
+    Closure::wrap(Box::new(move |event: Event| {
+        let json: String = event
+            .target()
+            .unwrap()
+            .dyn_into::<FileReader>()
+            .unwrap()
+            .result()
+            .unwrap()
+            .dyn_into::<JsString>()
+            .unwrap()
+            .into();
+
+        let emulator: Result<Emulator, serde_json::Error> = serde_json::from_str(&json);
+
+        match emulator {
+            Ok(emulator) => *load_state.borrow_mut() = Some(emulator),
+            Err(error)=> console::log_1(
+                &format!("The provided JSON failed to Deserialize into an Emulator structure, are you sure you provided a valid JSON?: {}", error).into(),
+            ),
+        }
+    }))
+}
+
+/// Closure to read user input VM state in JSON.
+pub fn read_user_state(filereader: FileReader) -> Closure<dyn FnMut(Event)> {
+    Closure::wrap(Box::new(move |event: Event| {
+        let file = event
+            .target()
+            .unwrap()
+            .dyn_into::<HtmlInputElement>()
+            .unwrap()
+            .files()
+            .unwrap()
+            .get(0)
+            .unwrap();
+
+        filereader.read_as_binary_string(&file).unwrap();
+    }) as Box<dyn FnMut(_)>)
 }
 
 /// Save all the traced VM states in JSON format to your disk.

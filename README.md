@@ -11,9 +11,9 @@ The emulator also has a debugger view that allows to
 * Pause / play the emulator
 * See the emulator internal variables
 * Save the current VM state in your clipboard in JSON format
-* Trace the VM state at each CPU cycle (be careful with this one, it slows down the browser a lot)
+* Load a JSON VM state to the emulator in order to replay from a specific state
+* Trace the VM state at each CPU cycle
 * Save all the traced VM states to your disk in JSON format (WIP)
-* Load a JSON VM state to the emulator in order to replay from a specific state (WIP)
 
 Modifying internal variables isn't supported yet, but it will be (hopefully) possible in future versions.
 
