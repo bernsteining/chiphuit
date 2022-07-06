@@ -26,16 +26,6 @@ RUN cargo install wasm-bindgen-cli basic-http-server
 RUN cargo build --target wasm32-unknown-unknown --release
 RUN wasm-bindgen ./target/wasm32-unknown-unknown/release/chiphuit.wasm --out-dir build --no-typescript --target no-modules --remove-name-section  --remove-producers-section --omit-default-module-path --omit-imports
 
-FROM alpine
+EXPOSE 4000
 
-COPY --from=builder /etc/passwd /etc/passwd
-COPY --from=builder /etc/group /etc/group
-
-WORKDIR /myuser
-RUN apk add --no-cache python3
-
-USER myuser:myuser
-
-EXPOSE 8000
-
-CMD [ "python3", "-m", "http.server", "--bind", "0.0.0.0", "--directory", "build"]
+CMD ["basic-http-server", "build", "--addr", "0.0.0.0:4000"]

@@ -31,8 +31,10 @@ docker build -t chiphuit -f Dockerfile .
 ```
 
 ```
-docker run -d chiphuit:latest
+docker run -p 4000:4000 chiphuit:latest
 ```
+
+And visit http://127.0.0.1:4000 with your favorite web browser.
 
 ## not the lazy docker way:
 
