@@ -79,7 +79,7 @@ pub fn main_wasm() -> Result<(), JsValue> {
                 emulator.cycle();
                 let state_clone = Rc::clone(&debugger.current_state);
                 *debugger.current_state.borrow_mut() =
-                    serde_json::to_string_pretty(&emulator).unwrap();
+                    serde_json::to_string(&emulator).unwrap();
 
                 if *emulator.tracing.borrow() {
                     debugger
