@@ -209,11 +209,10 @@ impl Emulator {
         self.rom_buffer.borrow_mut().clear();
     }
 
-    /// Hotswaps the ROM intro the `Emulator` instance's memory at
+    /// Hotswaps the ROM into the `Emulator` instance's memory at
     /// offset 512. This allows to change the game ran by the `Emulator` at
-    /// runtime without reload the page. `Emulator` fields are reinitialized as
-    /// if `Emulator::new()` was called in order to have a fresh `Emulator`
-    /// state.
+    /// runtime without reloading the page. `Emulator` fields are reinitialized as
+    /// if `Emulator::new()` was called in order to have a fresh `Emulator`.
     pub fn hotswap(&mut self) {
         self.memory = [0; 4096];
         self.screen = [false; 64 * 32];
