@@ -77,22 +77,22 @@ pub fn main_wasm() -> Result<(), JsValue> {
         if *emulator.running.borrow() {
             for _ in 0..10 {
                 emulator.cycle();
-                let state_clone = Rc::clone(&debugger.current_state);
-                *debugger.current_state.borrow_mut() =
+                let snapshot_clone = Rc::clone(&debugger.current_snapshot);
+                *debugger.current_snapshot.borrow_mut() =
                     serde_json::to_string(&emulator).unwrap();
 
                 if *emulator.tracing.borrow() {
                     debugger
-                        .states
+                        .snapshots
                         .borrow_mut()
-                        .push(state_clone.borrow().to_string());
+                        .push(snapshot_clone.borrow().to_string());
                 }
             }
             emulator.update_emulator_state(&debugger.element.rows());
             graphics::draw_screen(&canvas, emulator.screen);
 
-            if emulator.load_state.borrow().is_some() {
-                emulator.hotswap_state();
+            if emulator.load_snapshot.borrow().is_some() {
+                emulator.hotswap_snapshot();
             }
         }
     }) as Box<dyn FnMut()>));

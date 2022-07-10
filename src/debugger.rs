@@ -16,8 +16,8 @@ use web_sys::{
 /// An `Emulator` debugger.
 pub struct Debugger {
     pub element: web_sys::HtmlTableElement,
-    pub current_state: Rc<RefCell<String>>,
-    pub states: Rc<RefCell<Vec<String>>>,
+    pub current_snapshot: Rc<RefCell<String>>,
+    pub snapshots: Rc<RefCell<Vec<String>>>,
 }
 
 impl Debugger {
@@ -26,15 +26,15 @@ impl Debugger {
     /// # Arguments
     ///
     /// * `element` - A HTMLTableElement to render the Debugger in the GUI.
-    /// * `current_state` - Serialized Emulator snapshot during runtime.
-    /// * `states` - Stacked serialized Emulator snapshots, when tracing.
+    /// * `current_snapshot` - Serialized Emulator snapshot during runtime.
+    /// * `snapshots` - Stacked serialized Emulator snapshots, when tracing.
     pub fn new() -> Debugger {
         let debugger = create_element();
 
         Debugger {
             element: debugger,
-            current_state: Rc::new(RefCell::new(String::new())),
-            states: Rc::new(RefCell::new(Vec::new())),
+            current_snapshot: Rc::new(RefCell::new(String::new())),
+            snapshots: Rc::new(RefCell::new(Vec::new())),
         }
     }
 
@@ -48,11 +48,11 @@ impl Debugger {
 
         // 2nd row
         trace(&self.element, &emulator.tracing);
-        copy(&self.element, &self.current_state);
+        copy(&self.element, &self.current_snapshot);
 
         // 3rd row
         load(&self.element);
-        set_load_file_reader(&emulator.load_state);
+        set_load_file_reader(&emulator.load_snapshot);
         dump(self);
 
         // last row
@@ -104,7 +104,7 @@ fn fill_rows(element: &web_sys::HtmlTableElement) {
     }
 }
 
-/// Activate tracing mode of the VM, allowing to save the VM's internal state
+/// Activate tracing mode of the VM, allowing to save the VM's internal snapshot
 /// at each CPU cycle, and to save it in JSON format.
 fn trace(element: &web_sys::HtmlTableElement, tracing: &Rc<RefCell<bool>>) {
     let row = element
@@ -129,8 +129,8 @@ fn trace(element: &web_sys::HtmlTableElement, tracing: &Rc<RefCell<bool>>) {
     trace_callback.forget();
 }
 
-/// Copy the current VM state in JSON format to clipboard.
-fn copy(element: &web_sys::HtmlTableElement, state: &Rc<RefCell<String>>) {
+/// Copy the current VM snapshot in JSON format to clipboard.
+fn copy(element: &web_sys::HtmlTableElement, snapshot: &Rc<RefCell<String>>) {
     let rows = element.rows();
 
     let copy = rows
@@ -144,14 +144,14 @@ fn copy(element: &web_sys::HtmlTableElement, state: &Rc<RefCell<String>>) {
     copy.set_class_name("debugger_button");
     copy.set_inner_html("copy to 📋");
 
-    let state_clone = Rc::clone(state);
+    let snapshot_clone = Rc::clone(snapshot);
     let copy_callback = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
         window()
             .unwrap()
             .navigator()
             .clipboard()
             .unwrap()
-            .write_text(&state_clone.borrow().to_string());
+            .write_text(&snapshot_clone.borrow().to_string());
     }) as Box<dyn FnMut(_)>);
 
     copy.add_event_listener_with_callback("mousedown", copy_callback.as_ref().unchecked_ref())
@@ -159,7 +159,7 @@ fn copy(element: &web_sys::HtmlTableElement, state: &Rc<RefCell<String>>) {
     copy_callback.forget();
 }
 
-/// Load a JSON VM state in the `Emulator`.
+/// Load a JSON VM snapshot in the `Emulator`.
 fn load(element: &web_sys::HtmlTableElement) {
     let row = element
         .insert_row()
@@ -193,28 +193,28 @@ fn load(element: &web_sys::HtmlTableElement) {
     append_element_to_another(&label, "load");
 }
 
-/// Set the button to allow the user to supply a VM state to the `Emulator`.
-pub fn set_load_file_reader(emulator_load_state: &Rc<RefCell<Option<Emulator>>>) {
+/// Set the button to allow the user to supply a VM snapshot to the `Emulator`.
+pub fn set_load_file_reader(emulator_load_snapshot: &Rc<RefCell<Option<Emulator>>>) {
     let file_input = document().get_element_by_id("load").unwrap();
     // file_input.clone().dyn_into::<HtmlInputElement>().unwrap().set_type("file");
     let file_reader = FileReader::new().unwrap().dyn_into::<FileReader>().unwrap();
 
-    let handle_load_event = load_user_state(emulator_load_state);
+    let handle_load_event = load_user_snapshot(emulator_load_snapshot);
     file_reader.set_onloadend(Some(handle_load_event.as_ref().unchecked_ref()));
     handle_load_event.forget();
 
-    let handle_read_event = read_user_state(file_reader);
+    let handle_read_event = read_user_snapshot(file_reader);
     file_input
         .add_event_listener_with_callback("change", handle_read_event.as_ref().unchecked_ref())
         .unwrap();
     handle_read_event.forget();
 }
 
-/// Closure to load user input VM state in the Emulator.
-pub fn load_user_state(
-    emulator_load_state: &Rc<RefCell<Option<Emulator>>>,
+/// Closure to load user input VM snapshot in the Emulator.
+pub fn load_user_snapshot(
+    emulator_load_snapshot: &Rc<RefCell<Option<Emulator>>>,
 ) -> Closure<dyn FnMut(Event)> {
-    let load_state = Rc::clone(emulator_load_state);
+    let load_snapshot = Rc::clone(emulator_load_snapshot);
     Closure::wrap(Box::new(move |event: Event| {
         let json: String = event
             .target()
@@ -230,7 +230,7 @@ pub fn load_user_state(
         let emulator: Result<Emulator, serde_json::Error> = serde_json::from_str(&json);
 
         match emulator {
-            Ok(emulator) => *load_state.borrow_mut() = Some(emulator),
+            Ok(emulator) => *load_snapshot.borrow_mut() = Some(emulator),
             Err(error)=> console::log_1(
                 &format!("The provided JSON failed to Deserialize into an Emulator structure, are you sure you provided a valid JSON?: {}", error).into(),
             ),
@@ -238,8 +238,8 @@ pub fn load_user_state(
     }))
 }
 
-/// Closure to read user input VM state in JSON.
-pub fn read_user_state(filereader: FileReader) -> Closure<dyn FnMut(Event)> {
+/// Closure to read user input VM snapshot in JSON.
+pub fn read_user_snapshot(filereader: FileReader) -> Closure<dyn FnMut(Event)> {
     Closure::wrap(Box::new(move |event: Event| {
         let file = event
             .target()
@@ -255,7 +255,7 @@ pub fn read_user_state(filereader: FileReader) -> Closure<dyn FnMut(Event)> {
     }) as Box<dyn FnMut(_)>)
 }
 
-/// Save all the traced VM states in JSON format to your disk.
+/// Save all the traced VM snapshots in JSON format to your disk.
 fn dump(debugger: &Debugger) {
     // should pop a file dialog on click so the user can choose a path
     // where to save the JSON.
@@ -273,7 +273,7 @@ fn dump(debugger: &Debugger) {
     dump.set_class_name("debugger_button");
     dump.set_inner_html("dump");
 
-    // todo: Serialize Debugger.states to JSON and allow to it save on disk.
+    // todo: Serialize Debugger.snapshots to JSON and allow to it save on disk.
 }
 
 /// Set callbacks to allow modification of the `Emulator`'s fields.
