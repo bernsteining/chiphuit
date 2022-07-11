@@ -4,7 +4,7 @@
 //! - The file input to handle the ROM
 use crate::utils::{
     append_element_to_another, append_to_body, change_view, document, set_callback_to_button,
-    set_callback_to_key,
+    set_callback_to_key, read_user_file
 };
 use js_sys::JsString;
 use std::cell::RefCell;
@@ -133,23 +133,6 @@ pub fn load_user_rom(rom_buffer: &Rc<RefCell<Vec<u8>>>) -> Closure<dyn FnMut(Eve
     }))
 }
 
-/// Closure to read user input ROM.
-pub fn read_user_rom(filereader: FileReader) -> Closure<dyn FnMut(Event)> {
-    Closure::wrap(Box::new(move |event: Event| {
-        let file = event
-            .target()
-            .unwrap()
-            .dyn_into::<HtmlInputElement>()
-            .unwrap()
-            .files()
-            .unwrap()
-            .get(0)
-            .unwrap();
-
-        filereader.read_as_binary_string(&file).unwrap();
-    }) as Box<dyn FnMut(_)>)
-}
-
 /// Set the button to allow the user to supply a ROM to the `Emulator`.
 pub fn set_file_reader(rom_buffer: &Rc<RefCell<Vec<u8>>>) {
     let file_input = document()
@@ -164,7 +147,7 @@ pub fn set_file_reader(rom_buffer: &Rc<RefCell<Vec<u8>>>) {
     file_reader.set_onloadend(Some(handle_load_event.as_ref().unchecked_ref()));
     handle_load_event.forget();
 
-    let handle_read_event = read_user_rom(file_reader);
+    let handle_read_event = read_user_file(file_reader);
     file_input
         .add_event_listener_with_callback("change", handle_read_event.as_ref().unchecked_ref())
         .unwrap();

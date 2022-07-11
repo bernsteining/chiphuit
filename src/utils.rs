@@ -4,7 +4,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{Element, HtmlElement};
+use web_sys::{Element, HtmlElement, FileReader, Event, HtmlInputElement};
 
 pub const EMULATOR_VARIABLES: [&str; 9] = [
     "current opcode",
@@ -176,6 +176,23 @@ pub fn change_view() -> Closure<dyn FnMut(web_sys::MouseEvent)> {
 }
 
 // Should write a set_gamepad_to_key here if we want to handle Gamepad events
+
+/// Closure to read user input file.
+pub fn read_user_file(filereader: FileReader) -> Closure<dyn FnMut(Event)> {
+    Closure::wrap(Box::new(move |event: Event| {
+        let file = event
+            .target()
+            .unwrap()
+            .dyn_into::<HtmlInputElement>()
+            .unwrap()
+            .files()
+            .unwrap()
+            .get(0)
+            .unwrap();
+
+        filereader.read_as_binary_string(&file).unwrap();
+    }) as Box<dyn FnMut(_)>)
+}
 
 // Utils to allow JSON serialization of big arrays with serde
 // shouldn't be necessary anymore when serde 2.0 gets released. Code snippet
