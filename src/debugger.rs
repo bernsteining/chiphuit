@@ -1,7 +1,7 @@
 //! # A module to view and modify the `Emulator` variables in the GUI.
 use crate::cpu::Emulator;
 use crate::utils::{
-    append_element_to_another, append_to_body, change_view, document, EMULATOR_VARIABLES,
+    append_element_to_another, append_to_body, change_view, document, EMULATOR_VARIABLES, read_user_file
 };
 use js_sys::JsString;
 use std::cell::RefCell;
@@ -10,7 +10,7 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{
     console, window, Event, FileReader, HtmlElement, HtmlInputElement, HtmlLabelElement,
-    HtmlTableCellElement, HtmlTableRowElement,
+    HtmlTableCellElement, HtmlTableRowElement, File
 };
 
 /// An `Emulator` debugger.
@@ -203,7 +203,7 @@ pub fn set_load_file_reader(emulator_load_state: &Rc<RefCell<Option<Emulator>>>)
     file_reader.set_onloadend(Some(handle_load_event.as_ref().unchecked_ref()));
     handle_load_event.forget();
 
-    let handle_read_event = read_user_state(file_reader);
+    let handle_read_event = read_user_file(file_reader);
     file_input
         .add_event_listener_with_callback("change", handle_read_event.as_ref().unchecked_ref())
         .unwrap();
@@ -238,27 +238,12 @@ pub fn load_user_state(
     }))
 }
 
-/// Closure to read user input VM state in JSON.
-pub fn read_user_state(filereader: FileReader) -> Closure<dyn FnMut(Event)> {
-    Closure::wrap(Box::new(move |event: Event| {
-        let file = event
-            .target()
-            .unwrap()
-            .dyn_into::<HtmlInputElement>()
-            .unwrap()
-            .files()
-            .unwrap()
-            .get(0)
-            .unwrap();
-
-        filereader.read_as_binary_string(&file).unwrap();
-    }) as Box<dyn FnMut(_)>)
-}
 
 /// Save all the traced VM states in JSON format to your disk.
 fn dump(debugger: &Debugger) {
     // should pop a file dialog on click so the user can choose a path
     // where to save the JSON.
+    // check this https://docs.rs/web-sys/latest/web_sys/struct.File.html
 
     let rows = debugger.element.rows();
 
