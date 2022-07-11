@@ -17,8 +17,8 @@ use web_sys::{
 /// An `Emulator` debugger.
 pub struct Debugger {
     pub element: web_sys::HtmlTableElement,
-    pub current_snapshot: Rc<RefCell<String>>,
-    pub snapshots: Rc<RefCell<Vec<String>>>,
+    pub current_snapshot: Rc<RefCell<Vec<u8>>>,
+    pub snapshots: Rc<RefCell<Vec<Vec<u8>>>>,
 }
 
 impl Debugger {
@@ -34,7 +34,7 @@ impl Debugger {
 
         Debugger {
             element: debugger,
-            current_snapshot: Rc::new(RefCell::new(String::new())),
+            current_snapshot: Rc::new(RefCell::new(Vec::new())),
             snapshots: Rc::new(RefCell::new(Vec::new())),
         }
     }
@@ -131,7 +131,7 @@ fn trace(element: &web_sys::HtmlTableElement, tracing: &Rc<RefCell<bool>>) {
 }
 
 /// Copy the current VM snapshot in JSON format to clipboard.
-fn copy(element: &web_sys::HtmlTableElement, snapshot: &Rc<RefCell<String>>) {
+fn copy(element: &web_sys::HtmlTableElement, snapshot: &Rc<RefCell<Vec<u8>>>) {
     let rows = element.rows();
 
     let copy = rows
@@ -147,12 +147,15 @@ fn copy(element: &web_sys::HtmlTableElement, snapshot: &Rc<RefCell<String>>) {
 
     let snapshot_clone = Rc::clone(snapshot);
     let copy_callback = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
+        let emulator: Result<Emulator, rmp_serde::decode::Error> = rmp_serde::from_slice(&snapshot_clone.borrow());
+        let json = serde_json::to_string(&emulator.unwrap());
         window()
             .unwrap()
             .navigator()
             .clipboard()
             .unwrap()
-            .write_text(&snapshot_clone.borrow().to_string());
+            .write_text(&json.unwrap());
+
     }) as Box<dyn FnMut(_)>);
 
     copy.add_event_listener_with_callback("mousedown", copy_callback.as_ref().unchecked_ref())
@@ -217,7 +220,7 @@ pub fn load_user_snapshot(
 ) -> Closure<dyn FnMut(Event)> {
     let load_snapshot = Rc::clone(emulator_load_snapshot);
     Closure::wrap(Box::new(move |event: Event| {
-        let json: String = event
+        let msgpack: Vec<u8> = event
             .target()
             .unwrap()
             .dyn_into::<FileReader>()
@@ -226,9 +229,11 @@ pub fn load_user_snapshot(
             .unwrap()
             .dyn_into::<JsString>()
             .unwrap()
-            .into();
+            .iter()
+            .map(|x| x as u8)
+            .collect();
 
-        let emulator: Result<Emulator, serde_json::Error> = serde_json::from_str(&json);
+        let emulator: Result<Emulator, rmp_serde::decode::Error> = rmp_serde::from_slice(&msgpack);
 
         match emulator {
             Ok(emulator) => *load_snapshot.borrow_mut() = Some(emulator),
