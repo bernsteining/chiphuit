@@ -3,8 +3,8 @@
 //! - The breakpoint
 //! - The file input to handle the ROM
 use crate::utils::{
-    append_element_to_another, append_to_body, change_view, document, set_callback_to_button,
-    set_callback_to_key, read_user_file
+    append_element_to_another, append_to_body, change_view, document, read_user_file,
+    set_callback_to_button, set_callback_to_key,
 };
 use js_sys::JsString;
 use std::cell::RefCell;

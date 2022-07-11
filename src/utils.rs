@@ -4,7 +4,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{Element, HtmlElement, FileReader, Event, HtmlInputElement};
+use web_sys::{Element, Event, FileReader, HtmlElement, HtmlInputElement};
 
 pub const EMULATOR_VARIABLES: [&str; 9] = [
     "current opcode",

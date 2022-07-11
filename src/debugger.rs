@@ -1,7 +1,8 @@
 //! # A module to view and modify the `Emulator` variables in the GUI.
 use crate::cpu::Emulator;
 use crate::utils::{
-    append_element_to_another, append_to_body, change_view, document, EMULATOR_VARIABLES, read_user_file
+    append_element_to_another, append_to_body, change_view, document, read_user_file,
+    EMULATOR_VARIABLES,
 };
 use js_sys::JsString;
 use std::cell::RefCell;
@@ -10,7 +11,7 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{
     console, window, Event, FileReader, HtmlElement, HtmlInputElement, HtmlLabelElement,
-    HtmlTableCellElement, HtmlTableRowElement, File
+    HtmlTableCellElement, HtmlTableRowElement,
 };
 
 /// An `Emulator` debugger.
@@ -237,7 +238,6 @@ pub fn load_user_snapshot(
         }
     }))
 }
-
 
 /// Save all the traced VM snapshots in JSON format to your disk.
 fn dump(debugger: &Debugger) {
