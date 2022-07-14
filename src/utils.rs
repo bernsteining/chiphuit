@@ -4,7 +4,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{Element, Event, FileReader, HtmlElement, HtmlInputElement};
+use web_sys::{window, Element, Event, FileReader, HtmlElement, HtmlInputElement};
 
 pub const EMULATOR_VARIABLES: [&str; 9] = [
     "current opcode",
@@ -70,6 +70,16 @@ pub fn set_timeout(f: &Closure<dyn FnMut()>, timeout_ms: i32) -> i32 {
             timeout_ms,
         )
         .expect("should register `setTimeout` OK")
+}
+
+/// Util function to put a string in the clipboard
+pub fn to_clipboard(content: String) {
+    window()
+        .unwrap()
+        .navigator()
+        .clipboard()
+        .unwrap()
+        .write_text(&content);
 }
 
 /// Util function to set listeners and callbacks on buttons.

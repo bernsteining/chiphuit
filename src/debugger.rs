@@ -1,7 +1,7 @@
 //! # A module to view and modify the `Emulator` variables in the GUI.
 use crate::cpu::Emulator;
 use crate::utils::{
-    append_element_to_another, append_to_body, change_view, document, read_user_file,
+    append_element_to_another, append_to_body, change_view, document, read_user_file, to_clipboard,
     EMULATOR_VARIABLES,
 };
 use js_sys::JsString;
@@ -10,8 +10,8 @@ use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{
-    console, window, Event, FileReader, HtmlElement, HtmlInputElement, HtmlLabelElement,
-    HtmlTableCellElement, HtmlTableRowElement,
+    console, Event, FileReader, HtmlElement, HtmlInputElement, HtmlLabelElement,
+    HtmlTableRowElement,
 };
 
 /// An `Emulator` debugger.
@@ -43,16 +43,12 @@ impl Debugger {
     pub fn set_debugger(self: &Debugger, emulator: &Emulator) {
         fill_rows(&self.element);
 
-        // 1st row
-        edit(&self.element);
-        commit(&self.element);
-
         // 2nd row
-        trace(&self.element, &emulator.tracing);
+        load(&self.element);
         copy(&self.element, &self.current_snapshot);
 
         // 3rd row
-        load(&self.element);
+        trace(&self.element, &emulator.tracing);
         set_load_file_reader(&emulator.load_snapshot);
         dump(self);
 
@@ -147,12 +143,7 @@ fn copy(element: &web_sys::HtmlTableElement, snapshot: &Rc<RefCell<String>>) {
 
     let snapshot_clone = Rc::clone(snapshot);
     let copy_callback = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
-        window()
-            .unwrap()
-            .navigator()
-            .clipboard()
-            .unwrap()
-            .write_text(&snapshot_clone.borrow().to_string());
+        to_clipboard(snapshot_clone.borrow().to_string());
     }) as Box<dyn FnMut(_)>);
 
     copy.add_event_listener_with_callback("mousedown", copy_callback.as_ref().unchecked_ref())
@@ -239,12 +230,8 @@ pub fn load_user_snapshot(
     }))
 }
 
-/// Save all the traced VM snapshots in JSON format to your disk.
+/// Save all the traced VM snapshots in JSON format to your clipboard.
 fn dump(debugger: &Debugger) {
-    // should pop a file dialog on click so the user can choose a path
-    // where to save the JSON.
-    // check this https://docs.rs/web-sys/latest/web_sys/struct.File.html
-
     let rows = debugger.element.rows();
 
     let dump = rows
@@ -258,102 +245,17 @@ fn dump(debugger: &Debugger) {
     dump.set_class_name("debugger_button");
     dump.set_inner_html("dump");
 
+    let snapshots_clone = Rc::clone(&debugger.snapshots);
+    let dump_callback = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
+        let snapshots = (*snapshots_clone.borrow()).join("");
+        to_clipboard(snapshots);
+    }) as Box<dyn FnMut(_)>);
+
+    dump.add_event_listener_with_callback("mousedown", dump_callback.as_ref().unchecked_ref())
+        .unwrap();
+    dump_callback.forget();
+
     // todo: Serialize Debugger.snapshots to JSON and allow to it save on disk.
-}
-
-/// Set callbacks to allow modification of the `Emulator`'s fields.
-fn edit(element: &web_sys::HtmlTableElement) {
-    let edit = element
-        .insert_row()
-        .unwrap()
-        .dyn_into::<web_sys::HtmlTableRowElement>()
-        .unwrap()
-        .insert_cell()
-        .unwrap();
-
-    edit.set_class_name("debugger_button");
-    edit.set_id("debugger_edit");
-    edit.set_inner_html("edit");
-
-    let edit_callback = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
-        let rows = document()
-            .get_element_by_id("debugger")
-            .unwrap()
-            .dyn_into::<web_sys::HtmlTableElement>()
-            .expect("should have an HtmlTableElement.")
-            .rows();
-
-        let range = 1..EMULATOR_VARIABLES.len();
-
-        match rows
-            .get_with_index(1)
-            .unwrap()
-            .has_attribute("contenteditable")
-        {
-            true => {
-                for index in range {
-                    get_value_cell_from_nth_row(&rows, index as u32)
-                        .remove_attribute("contenteditable")
-                        .unwrap()
-                }
-            }
-            false => {
-                for index in range {
-                    get_value_cell_from_nth_row(&rows, index as u32)
-                        .set_attribute("contenteditable", "true")
-                        .unwrap()
-                }
-            }
-        }
-    }) as Box<dyn FnMut(_)>);
-
-    edit.add_event_listener_with_callback("mousedown", edit_callback.as_ref().unchecked_ref())
-        .unwrap();
-    edit_callback.forget();
-}
-
-/// Set callback to modify an `Emulator` struct in the GUI.
-fn commit(element: &web_sys::HtmlTableElement) {
-    let rows = element.rows();
-
-    let commit = rows
-        .get_with_index(rows.length() - 1)
-        .unwrap()
-        .dyn_into::<web_sys::HtmlTableRowElement>()
-        .unwrap()
-        .insert_cell()
-        .unwrap();
-
-    commit.set_class_name("debugger_button");
-    commit.set_inner_html("commit");
-
-    let commit_callback = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
-        let rows = document()
-            .get_element_by_id("debugger")
-            .unwrap()
-            .dyn_into::<web_sys::HtmlTableElement>()
-            .expect("should have an HtmlTableElement.")
-            .rows();
-
-        let range = 1..EMULATOR_VARIABLES.len();
-
-        if get_value_cell_from_nth_row(&rows, 1).has_attribute("contenteditable") {
-            for index in range {
-                get_value_cell_from_nth_row(&rows, index as u32)
-                    .remove_attribute("contenteditable")
-                    .unwrap()
-
-                // find a way (generic if possible) to serialize (with serde?)
-                // correclty the values collected and push them into the
-                // Emulator struct.
-            }
-        }
-    }) as Box<dyn FnMut(_)>);
-
-    commit
-        .add_event_listener_with_callback("mousedown", commit_callback.as_ref().unchecked_ref())
-        .unwrap();
-    commit_callback.forget();
 }
 
 /// Set button to go back to keypad view and to play/pause in debugger view.
@@ -396,20 +298,4 @@ fn set_breakpoint_and_keypad_view(element: &web_sys::HtmlTableElement) {
         .add_event_listener_with_callback("mousedown", closure.as_ref().unchecked_ref())
         .unwrap();
     closure.forget()
-}
-
-/// A helper function to get the value of the `Debugger` at a specific row.
-fn get_value_cell_from_nth_row(
-    rows: &web_sys::HtmlCollection,
-    row_index: u32,
-) -> HtmlTableCellElement {
-    rows.get_with_index(row_index)
-        .unwrap()
-        .dyn_into::<HtmlTableRowElement>()
-        .unwrap()
-        .cells()
-        .item(1)
-        .unwrap()
-        .dyn_into::<HtmlTableCellElement>()
-        .unwrap()
 }

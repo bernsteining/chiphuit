@@ -6,21 +6,18 @@ Yet another chip8 emulator, written in Rust compiled to WASM.
 
 The emulator is hosted online [here](https://chiphuit.glitch.me/) if you want to give it a try without building from sources, you will have to give the emulator the game you want to play, here's some [chip8 games](https://github.com/kripod/chip8-roms/tree/master/games) to download. Works on touchscreen devices as well.
 
-The emulator also has a debugger view that allows to
-
-* Pause / play the emulator
-* See the emulator internal variables
-* Save the current VM state in your clipboard in JSON format
-* Load a JSON VM state to the emulator in order to replay from a specific state
-* Trace the VM state at each CPU cycle
-* Save all the traced VM states to your disk in JSON format (WIP)
-
-Modifying internal variables isn't supported yet, but it will be (hopefully) possible in future versions.
-
 | ![The emulator with the debugger](assets/emulator_debugger.png) |
 |:--:|
 | *The emulator playing Tetris with the debugger view next to it* |
 
+The emulator also has a debugger view that allows to
+
+* See the emulator internal variables
+* Load a JSON VM snapshot to the emulator in order to replay from a specific snapshot
+* Copy the current VM snapshot in your clipboard in JSON format
+* Trace the VM snapshot at each CPU cycle
+* Dump all the traced VM snapshots to your clipboard in JSON format
+* Pause / play the emulator & return to gamepad view
 
 # build & run from sources
 
@@ -111,30 +108,5 @@ Useful links that helped me understand the basics of writing an emulator:
 
 [Awesome chip8 rom to test opcodes correctness](https://github.com/corax89/chip8-test-rom)
 
-# Todolist
-
-## debugger
-- Write a serde serializer for Emulator from HtmlCollection?
-- Write a Message Queue between the Debugger struct and the Emulator struct to allow debugging
-- Finish step button -> Make it call emulatore.cycle() on click
-- To make it `Emulator` agnostic, it should take as argument a Serialized `Emulator` struct, then `fill_rows` should iterate over the values of the Serialized `Emulator`.
-
-### tracing
-- Define Closure & callback (with https://developer.mozilla.org/en-US/docs/Web/API/FileSystemWritableFileStream ?)
-- Allow loading trace state into Emulator (Deserialize Trait from html table)
-
-## front
-- move all css statements to rust files ? use https://github.com/chinedufn/percy ?
-- fix debugger layout in portrait mode
-
-## build
-- Allow other compilation targets than WASM with conditional compilation and find a crate to render the screen (egui | wgpu | winit | glfw), or just run the emulator in the terminal?
-- package & publish on [wapm](https://wapm.io/)?
-
 ## ideas
-- Make the clipboard feature work on Webkit
-- Fix CSS render in landscape mode for Chrome
 - add beep sound with [web_sys::AudioContext](https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.AudioContext.html)
-- add error handling to code instead of all the wild unwraps
-- set FPS / emulator speed during runtime
-- add gamepad support with [browser API](https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.GamepadEvent.html) not sure this one makes sense for chip8, but it will definitely be useful for future gaming architectures
