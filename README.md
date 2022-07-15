@@ -109,4 +109,4 @@ Useful links that helped me understand the basics of writing an emulator:
 [Awesome chip8 rom to test opcodes correctness](https://github.com/corax89/chip8-test-rom)
 
 ## ideas
-- add beep sound with [web_sys::AudioContext](https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.AudioContext.html)
+- allow multiple snapshots hotswaps during runtime

@@ -27,6 +27,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 
+mod audio;
 mod cpu;
 mod debugger;
 mod graphics;
@@ -45,6 +46,7 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 pub fn main_wasm() -> Result<(), JsValue> {
     utils::set_document();
     let canvas = graphics::set_canvas();
+    let audio_context = audio::FmOsc::new().unwrap();
     let mut emulator = cpu::Emulator::new();
     emulator.load_font();
 
@@ -86,6 +88,7 @@ pub fn main_wasm() -> Result<(), JsValue> {
                         .borrow_mut()
                         .push(snapshot_clone.borrow().to_string());
                 }
+            audio::sound(&mut emulator, &audio_context);
             }
             emulator.update_emulator_state(&debugger.element.rows());
             graphics::draw_screen(&canvas, emulator.screen);

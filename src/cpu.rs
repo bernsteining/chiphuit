@@ -86,7 +86,7 @@ pub struct Emulator {
     stack_pointer: usize,
 
     delay_timer: u8,
-    sound_timer: u8,
+    pub sound_timer: u8,
 
     #[serde(with = "arrays")]
     pub screen: [bool; 64 * 32],
@@ -255,14 +255,6 @@ impl Emulator {
     fn update_timers(&mut self) {
         if self.delay_timer > 0 {
             self.delay_timer -= 1
-        }
-
-        match self.sound_timer {
-            1 => {
-                println!("BEEP");
-                self.sound_timer -= 1
-            }
-            _ => self.sound_timer -= 1,
         }
     }
 

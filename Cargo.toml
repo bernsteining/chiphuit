@@ -51,7 +51,14 @@ features = [
   'HtmlHeadElement',
   'CssStyleDeclaration',
   'Clipboard',
-  'Navigator']
+  'Navigator',
+  'AudioContext',
+  'OscillatorType',
+  'OscillatorNode',
+  'GainNode',
+  'AudioParam',
+  'AudioNode',
+  'AudioDestinationNode']
 
 [dev-dependencies]
 wasm-bindgen-test = "0.2"
