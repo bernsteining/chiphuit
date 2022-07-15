@@ -55,6 +55,18 @@ impl Debugger {
         // last row
         set_breakpoint_and_keypad_view(&self.element);
     }
+
+    pub fn get_serialized_current_snapshot(self: &Debugger, emulator: &Emulator) {
+        *self.current_snapshot.borrow_mut() = serde_json::to_string(&emulator).unwrap();
+    }
+
+    pub fn handle_tracing(self: &Debugger, emulator: &Emulator) {
+        if *emulator.tracing.borrow() {
+            self.snapshots
+                .borrow_mut()
+                .push(self.current_snapshot.borrow().to_string());
+        }
+    }
 }
 
 /// Create the `Debugger` GUI element.

@@ -229,26 +229,28 @@ impl Emulator {
 
     /// Hotswaps the Emulator with the snapshot provided by
     /// the user in JSON format.
-    pub fn hotswap_snapshot(&mut self) {
-        let emulator_clone = Rc::clone(&self.load_snapshot);
-        let emulator_borrow = emulator_clone.borrow();
-        let new_emulator = (emulator_borrow.as_ref()).unwrap();
+    pub fn handle_snapshot_hotswap(&mut self) {
+        if self.load_snapshot.borrow().is_some() {
+            let emulator_clone = Rc::clone(&self.load_snapshot);
+            let emulator_borrow = emulator_clone.borrow();
+            let new_emulator = (emulator_borrow.as_ref()).unwrap();
 
-        self.memory = new_emulator.memory;
-        self.screen = new_emulator.screen;
-        self.registers = new_emulator.registers;
-        self.index_register = new_emulator.index_register;
-        self.program_counter = new_emulator.program_counter;
-        self.stack = new_emulator.stack;
-        self.stack_pointer = new_emulator.stack_pointer;
-        self.delay_timer = new_emulator.delay_timer;
-        self.sound_timer = new_emulator.sound_timer;
+            self.memory = new_emulator.memory;
+            self.screen = new_emulator.screen;
+            self.registers = new_emulator.registers;
+            self.index_register = new_emulator.index_register;
+            self.program_counter = new_emulator.program_counter;
+            self.stack = new_emulator.stack;
+            self.stack_pointer = new_emulator.stack_pointer;
+            self.delay_timer = new_emulator.delay_timer;
+            self.sound_timer = new_emulator.sound_timer;
 
-        // at the moment loading a VM snapshot only works once
-        // since the ref to the load_snapshot is dropped
-        // todo: make it possible to hotswap a VM snapshot twice
-        // during a runtime
-        self.load_snapshot = Rc::new(RefCell::new(None::<Emulator>));
+            // at the moment loading a VM snapshot only works once
+            // since the ref to the load_snapshot is dropped
+            // todo: make it possible to hotswap a VM snapshot twice
+            // during a runtime
+            self.load_snapshot = Rc::new(RefCell::new(None::<Emulator>));
+        }
     }
 
     /// Decrements `Emulator` timers.
