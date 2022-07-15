@@ -72,6 +72,7 @@ pub fn set_timeout(f: &Closure<dyn FnMut()>, timeout_ms: i32) -> i32 {
         .expect("should register `setTimeout` OK")
 }
 
+#[allow(unused_must_use)]
 /// Util function to put a string in the clipboard
 pub fn to_clipboard(content: String) {
     window()
