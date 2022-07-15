@@ -213,18 +213,20 @@ impl Emulator {
     /// offset 512. This allows to change the game ran by the `Emulator` at
     /// runtime without reloading the page. `Emulator` fields are reinitialized as
     /// if `Emulator::new()` was called in order to have a fresh `Emulator`.
-    pub fn hotswap(&mut self) {
-        self.memory = [0; 4096];
-        self.screen = [false; 64 * 32];
-        self.registers = [0; 16];
-        self.index_register = 0;
-        self.program_counter = 512;
-        self.stack = [0; 16];
-        self.stack_pointer = 0;
-        self.delay_timer = 0;
-        self.sound_timer = 0;
+    pub fn handle_rom_hotswap(&mut self) {
+        if !self.rom_buffer.borrow().is_empty() {
+            self.memory = [0; 4096];
+            self.screen = [false; 64 * 32];
+            self.registers = [0; 16];
+            self.index_register = 0;
+            self.program_counter = 512;
+            self.stack = [0; 16];
+            self.stack_pointer = 0;
+            self.delay_timer = 0;
+            self.sound_timer = 0;
 
-        self.load_rom();
+            self.load_rom();
+        }
     }
 
     /// Hotswaps the Emulator with the snapshot provided by
