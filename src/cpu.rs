@@ -233,9 +233,7 @@ impl Emulator {
     /// the user in JSON format.
     pub fn handle_snapshot_hotswap(&mut self) {
         if self.load_snapshot.borrow().is_some() {
-            let emulator_clone = Rc::clone(&self.load_snapshot);
-            let emulator_borrow = emulator_clone.borrow();
-            let new_emulator = (emulator_borrow.as_ref()).unwrap();
+            let new_emulator = Rc::clone(&self.load_snapshot).borrow_mut().take().unwrap();
 
             self.memory = new_emulator.memory;
             self.screen = new_emulator.screen;
@@ -246,12 +244,6 @@ impl Emulator {
             self.stack_pointer = new_emulator.stack_pointer;
             self.delay_timer = new_emulator.delay_timer;
             self.sound_timer = new_emulator.sound_timer;
-
-            // at the moment loading a VM snapshot only works once
-            // since the ref to the load_snapshot is dropped
-            // todo: make it possible to hotswap a VM snapshot twice
-            // during a runtime
-            self.load_snapshot = Rc::new(RefCell::new(None::<Emulator>));
         }
     }
 

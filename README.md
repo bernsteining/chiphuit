@@ -107,6 +107,3 @@ Useful links that helped me understand the basics of writing an emulator:
 [Wikipedia page describing chip8 architecture, opcodes, display etc](https://en.wikipedia.org/wiki/CHIP-8)
 
 [Awesome chip8 rom to test opcodes correctness](https://github.com/corax89/chip8-test-rom)
-
-## ideas
-- allow multiple snapshots hotswaps during runtime
