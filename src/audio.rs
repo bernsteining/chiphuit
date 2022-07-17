@@ -48,11 +48,11 @@ impl FmOsc {
 }
 
 pub fn sound(emulator: &mut cpu::Emulator, audio_context: &FmOsc) {
-    if emulator.sound_timer > 0 {
-        audio_context.gain.gain().set_value(0.04);
-        emulator.sound_timer -= 1;
-    }
-    if emulator.sound_timer == 0 {
-        audio_context.gain.gain().set_value(0.0);
+    match emulator.sound_timer {
+        0 => audio_context.gain.gain().set_value(0.0),
+        _ => {
+            audio_context.gain.gain().set_value(0.04);
+            emulator.sound_timer -= 1;
+        }
     }
 }
