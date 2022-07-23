@@ -19,6 +19,8 @@ The emulator also has a debugger view that allows to
 * Dump all the traced VM snapshots to your clipboard in JSON format
 * Pause / play the emulator & return to gamepad view
 
+An example of VM snapshot is avalaible in `assets/tetris_snapshot.json`.
+
 # build & run from sources
 
 ## lazy docker way:
