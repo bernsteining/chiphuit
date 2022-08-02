@@ -478,7 +478,7 @@ impl Emulator {
 
         for row in 0..height as u16 {
             let row_pixels: [bool; 8] =
-                u8_to_bools(self.memory[(self.index_register as usize) + row as usize]);
+                u8_to_bools(self.memory[(self.index_register + row) as usize]);
 
             for i in 0..8 {
                 let index = (x + i + (y + row) * 64) as usize;
