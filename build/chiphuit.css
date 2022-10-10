@@ -6,7 +6,7 @@ body {
   justify-content: center;
 
   /* necessary for neat pixels */
-  image-rendering: crisp-edges;
+  image-rendering: pixelated;
   background-color: #181a1b;
 
   /* avoid double tap zoom etc on touch devices */
