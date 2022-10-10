@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+    <title>web-sys journey: writing a chip8 emulator in rust :: Bernie&#39;s lair</title>
+  
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="intro I&amp;rsquo;ve always been curious about emulation, hypervisors etc so I started to read about it and came accross an awesome blog post explaining the basics of emulation with chip8 as an example.
+It demystified a lot and didn&amp;rsquo;t spoiled too much so it motivated me a lot to write my own emulator from scratch using rust and targeting WebAssembly.
+First of all I didn&amp;rsquo;t want to use third party crates that would have spoiled the journey, such as gloo." />
+<meta name="keywords" content="rust, chip8, emulation, emulator, wasm, webassembly" />
+<meta name="robots" content="noodp" />
+<link rel="canonical" href="/posts/writing_a_chip8_emulator_in_rust/" />
+
+
+
+
+<link rel="stylesheet" href="/assets/style.css">
+
+  <link rel="stylesheet" href="/assets/pink.css">
+
+
+
+
+
+
+<link rel="apple-touch-icon" href="/img/apple-touch-icon-192x192.png">
+
+  <link rel="shortcut icon" href="/img/favicon/pink.png">
+
+
+
+<meta name="twitter:card" content="summary" />
+
+  
+    <meta name="twitter:site" content="" />
+  
+    <meta name="twitter:creator" content="" />
+
+
+
+<meta property="og:locale" content="en" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="web-sys journey: writing a chip8 emulator in rust">
+<meta property="og:description" content="intro I&amp;rsquo;ve always been curious about emulation, hypervisors etc so I started to read about it and came accross an awesome blog post explaining the basics of emulation with chip8 as an example.
+It demystified a lot and didn&amp;rsquo;t spoiled too much so it motivated me a lot to write my own emulator from scratch using rust and targeting WebAssembly.
+First of all I didn&amp;rsquo;t want to use third party crates that would have spoiled the journey, such as gloo." />
+<meta property="og:url" content="/posts/writing_a_chip8_emulator_in_rust/" />
+<meta property="og:site_name" content="Bernie&#39;s lair" />
+
+  <meta property="og:image" content="/">
+
+<meta property="og:image:width" content="2048">
+<meta property="og:image:height" content="1024">
+
+
+  <meta property="article:published_time" content="2021-08-06 16:15:42 &#43;0200 CEST" />
+
+
+
+
+
+
+
+
+
+
+
+
+</head>
+<body class="pink">
+
+
+<div class="container headings--one-size">
+
+  <header class="header">
+  <div class="header__inner">
+    <div class="header__logo">
+      <a href="/">
+  <div class="logo">
+    Terminal
+  </div>
+</a>
+
+    </div>
+    
+      <div class="menu-trigger">menu</div>
+    
+  </div>
+  
+    <nav class="menu">
+  <ul class="menu__inner menu__inner--desktop">
+    
+      
+        
+          <li><a href="/about">About</a></li>
+        
+      
+        
+          <li><a href="">Showcase</a></li>
+        
+      
+      
+    
+
+    
+  </ul>
+
+  <ul class="menu__inner menu__inner--mobile">
+    
+      
+        <li><a href="/about">About</a></li>
+      
+    
+      
+        <li><a href="">Showcase</a></li>
+      
+    
+    
+  </ul>
+</nav>
+
+  
+</header>
+
+
+  <div class="content">
+    
+<div class="post">
+  <h1 class="post-title">
+    <a href="/posts/writing_a_chip8_emulator_in_rust/">web-sys journey: writing a chip8 emulator in rust</a></h1>
+  <div class="post-meta">
+    
+      <span class="post-date">
+        2021-08-06 
+      </span>
+    
+    
+  </div>
+
+  
+  <span class="post-tags">
+    
+    #<a href="/tags/development/">development</a>&nbsp;
+    
+    #<a href="/tags/emulation/">emulation</a>&nbsp;
+    
+    #<a href="/tags/emudev/">emudev</a>&nbsp;
+    
+    #<a href="/tags/chip8/">chip8</a>&nbsp;
+    
+    #<a href="/tags/rust/">rust</a>&nbsp;
+    
+  </span>
+  
+
+  
+
+  
+
+  <div class="post-content"><div>
+        
+  <img src="/images/chip8/emulator_debugger.png"  class="left"  />
+
+
+<h1 id="intro">intro<a href="#intro" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>I&rsquo;ve always been curious about emulation, hypervisors etc so I started to read about it and came accross an <a href="https://multigesture.net/articles/how-to-write-an-emulator-chip-8-interpreter/">awesome blog post</a> explaining the basics of emulation with chip8 as an example.</p>
+<p>It demystified a lot and didn&rsquo;t spoiled too much so it motivated me a lot to write my own emulator from scratch using rust and targeting WebAssembly.</p>
+<p>First of all I didn&rsquo;t want to use third party crates that would have spoiled the journey, such as <a href="https://github.com/rustwasm/gloo">gloo</a>. I wanted to learn to use <a href="https://docs.rs/web-sys/latest/web_sys/index.html">web-sys</a> in order to control as much as possible the interaction between my code and the browser. This allowed me to learn a lot about the browsers APIs since <a href="https://docs.rs/web-sys/latest/web_sys/index.html">web-sys</a> types are directly mapped with the <a href="https://developer.mozilla.org/en-US/docs/Web/API">standard Web API</a>. According to its documentation, <a href="https://docs.rs/web-sys/latest/web_sys/index.html">web-sys</a> &ldquo;is sort of like the libc crate, but for the Web&rdquo;.</p>
+<p>Also, many Rust/WebAssembly projects tend to handle a lot of logic on the browser side with JavaScript code, I didn&rsquo;t want to do that and focused on doing as much as possible in rust.</p>
+<h1 id="chip8-vm">chip8 vm<a href="#chip8-vm" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>So, what&rsquo;s the chip8 VM?</p>
+<p>chip8 is a VM developed by <a href="https://en.wikipedia.org/wiki/Joseph_Weisbecker">Joseph Weisbecker</a> in the late 70&rsquo;s that allowed to play 2D monochromic games on computers such as the famous <a href="https://en.wikipedia.org/wiki/List_of_Space_Invaders_video_games">space invaders</a>, <a href="https://en.wikipedia.org/wiki/Pong">pong</a>, or <a href="https://en.wikipedia.org/wiki/Tetris">tetris</a>.</p>
+<p>It&rsquo;s one of the simplest VMs so it&rsquo;s often chosen to build a first toy emulator (yes that&rsquo;s my case!).</p>
+<p>Its screen resolution is 64x32 (only black &amp; white pixels), and has a keypad made of 16 keys to handle user input.</p>
+<p>It also has everything a stack based VM needs:</p>
+<ul>
+<li>4096 bytes of memory</li>
+<li>16 registers</li>
+<li>an index register</li>
+<li>a program counter</li>
+<li>a stack &amp; a stack pointer</li>
+<li>35 different opcodes</li>
+</ul>
+<p>NB: An opcode is a generic name to define a set of bits that define an atomic task for a given VM.</p>
+<p>Thus we can store these in an <code>Emulator</code> struct.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-rust" data-lang="rust"><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> <span style="color:#a6e22e">Emulator</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">pub</span> current_opcode: <span style="color:#a6e22e">OpCode</span>,
+</span></span><span style="display:flex;"><span>    memory: [<span style="color:#66d9ef">u8</span>; <span style="color:#ae81ff">4096</span>],
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    registers: [<span style="color:#66d9ef">u8</span>; <span style="color:#ae81ff">16</span>],
+</span></span><span style="display:flex;"><span>    index_register: <span style="color:#66d9ef">u16</span>,
+</span></span><span style="display:flex;"><span>    program_counter: <span style="color:#66d9ef">u16</span>,
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">pub</span> screen: [<span style="color:#66d9ef">bool</span>; <span style="color:#ae81ff">64</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">32</span>],
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">pub</span> stack: [<span style="color:#66d9ef">u16</span>; <span style="color:#ae81ff">16</span>],
+</span></span><span style="display:flex;"><span>    stack_pointer: <span style="color:#66d9ef">usize</span>,
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    delay_timer: <span style="color:#66d9ef">u8</span>,
+</span></span><span style="display:flex;"><span>    sound_timer: <span style="color:#66d9ef">u8</span>,
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">pub</span> keypad: <span style="color:#a6e22e">Rc</span><span style="color:#f92672">&lt;</span>RefCell<span style="color:#f92672">&lt;</span>[<span style="color:#66d9ef">bool</span>; <span style="color:#ae81ff">16</span>]<span style="color:#f92672">&gt;&gt;</span>,
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">pub</span> rom_buffer: <span style="color:#a6e22e">Rc</span><span style="color:#f92672">&lt;</span>RefCell<span style="color:#f92672">&lt;</span>Vec<span style="color:#f92672">&lt;</span><span style="color:#66d9ef">u8</span><span style="color:#f92672">&gt;&gt;&gt;</span>,
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">pub</span> running: <span style="color:#a6e22e">Rc</span><span style="color:#f92672">&lt;</span>RefCell<span style="color:#f92672">&lt;</span><span style="color:#66d9ef">bool</span><span style="color:#f92672">&gt;&gt;</span>,
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Each field is defined by a <a href="https://doc.rust-lang.org/rust-by-example/primitives.html">primitive type</a>:</p>
+<ul>
+<li><a href="https://doc.rust-lang.org/std/primitive.u8.html">u8</a> is an unsigned interger encoded on 8 bits.</li>
+<li><a href="https://doc.rust-lang.org/std/primitive.u16.html">u16</a> is an unsigned interger encoded on 16 bits.</li>
+<li><a href="https://doc.rust-lang.org/std/primitive.usize.html">usize</a> is the pointer-sized unsigned integer type.</li>
+<li><a href="https://doc.rust-lang.org/std/primitive.array.html">[T; n]</a> is an array of type T and length n.</li>
+<li>OpCode is a struct made of 4 <a href="https://doc.rust-lang.org/std/primitive.u8.html">u8</a>.</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-rust" data-lang="rust"><span style="display:flex;"><span><span style="color:#66d9ef">pub</span> <span style="color:#66d9ef">struct</span> <span style="color:#a6e22e">OpCode</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">pub</span> first_nibble: <span style="color:#66d9ef">u8</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">pub</span> second_nibble: <span style="color:#66d9ef">u8</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">pub</span> third_nibble: <span style="color:#66d9ef">u8</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">pub</span> fourth_nibble: <span style="color:#66d9ef">u8</span>,
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><ul>
+<li><a href="https://doc.rust-lang.org/book/ch15-05-interior-mutability.html">Rc&lt;RefCell&lt;T&gt;&gt;</a> is a way to ensure interior mutability</li>
+</ul>
+<p>Rust is a safe language and has concepts other languages do not have. The <a href="https://doc.rust-lang.org/book/ch04-02-references-and-borrowing.html">borrow checker</a> is one of them and <a href="https://doc.rust-lang.org/book/ch15-05-interior-mutability.html">Rc&lt;RefCell&lt;T&gt;&gt;</a> is just a way to check borrowing rules correctness at runtime instead of compile time. But that&rsquo;s absolutely not the point of this blogpost.</p>
+<h1 id="how-it-works">how it works<a href="#how-it-works" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>When the <code>Emulator</code> is initialized, all its fields are set to its <a href="https://github.com/bernsteining/chiphuit/blob/master/src/cpu.rs#L126">default values</a> (basically everything is set to 0 / false).</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-rust" data-lang="rust"><span style="display:flex;"><span><span style="color:#66d9ef">impl</span> Emulator {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">pub</span> <span style="color:#66d9ef">fn</span> <span style="color:#a6e22e">new</span>() -&gt; <span style="color:#a6e22e">Emulator</span> {
+</span></span><span style="display:flex;"><span>        Emulator {
+</span></span><span style="display:flex;"><span>            current_opcode: <span style="color:#a6e22e">OpCode</span> {
+</span></span><span style="display:flex;"><span>                first_nibble: <span style="color:#ae81ff">0_</span><span style="color:#66d9ef">u8</span>,
+</span></span><span style="display:flex;"><span>                second_nibble: <span style="color:#ae81ff">0_</span><span style="color:#66d9ef">u8</span>,
+</span></span><span style="display:flex;"><span>                third_nibble: <span style="color:#ae81ff">0_</span><span style="color:#66d9ef">u8</span>,
+</span></span><span style="display:flex;"><span>                fourth_nibble: <span style="color:#ae81ff">0_</span><span style="color:#66d9ef">u8</span>,
+</span></span><span style="display:flex;"><span>            },
+</span></span><span style="display:flex;"><span>            memory: [<span style="color:#ae81ff">0</span>; <span style="color:#ae81ff">4096</span>],
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            registers: [<span style="color:#ae81ff">0</span>; <span style="color:#ae81ff">16</span>],
+</span></span><span style="display:flex;"><span>            index_register: <span style="color:#ae81ff">0</span>,
+</span></span><span style="display:flex;"><span>            program_counter: <span style="color:#ae81ff">512</span>,
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            screen: [<span style="color:#66d9ef">false</span>; <span style="color:#ae81ff">64</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">32</span>],
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            stack: [<span style="color:#ae81ff">0</span>; <span style="color:#ae81ff">16</span>],
+</span></span><span style="display:flex;"><span>            stack_pointer: <span style="color:#ae81ff">0</span>,
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            delay_timer: <span style="color:#ae81ff">0</span>,
+</span></span><span style="display:flex;"><span>            sound_timer: <span style="color:#ae81ff">0</span>,
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            keypad: <span style="color:#a6e22e">Rc</span>::new(RefCell::new([<span style="color:#66d9ef">false</span>; <span style="color:#ae81ff">16</span>])),
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            running: <span style="color:#a6e22e">Rc</span>::new(RefCell::new(<span style="color:#66d9ef">false</span>)),
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            rom_buffer: <span style="color:#a6e22e">Rc</span>::new(RefCell::new(Vec::new())),
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>The <code>Emulator</code> then loads its fonts in memory.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-rust" data-lang="rust"><span style="display:flex;"><span><span style="color:#66d9ef">pub</span> <span style="color:#66d9ef">const</span> FONTS: [<span style="color:#66d9ef">u8</span>; <span style="color:#ae81ff">80</span>] <span style="color:#f92672">=</span> [
+</span></span><span style="display:flex;"><span>    <span style="color:#ae81ff">0xF0</span>, <span style="color:#ae81ff">0x90</span>, <span style="color:#ae81ff">0x90</span>, <span style="color:#ae81ff">0x90</span>, <span style="color:#ae81ff">0xF0</span>, <span style="color:#75715e">// 0
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#ae81ff">0x20</span>, <span style="color:#ae81ff">0x60</span>, <span style="color:#ae81ff">0x20</span>, <span style="color:#ae81ff">0x20</span>, <span style="color:#ae81ff">0x70</span>, <span style="color:#75715e">// 1
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#ae81ff">0xF0</span>, <span style="color:#ae81ff">0x10</span>, <span style="color:#ae81ff">0xF0</span>, <span style="color:#ae81ff">0x80</span>, <span style="color:#ae81ff">0xF0</span>, <span style="color:#75715e">// 2
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#ae81ff">0xF0</span>, <span style="color:#ae81ff">0x10</span>, <span style="color:#ae81ff">0xF0</span>, <span style="color:#ae81ff">0x10</span>, <span style="color:#ae81ff">0xF0</span>, <span style="color:#75715e">// 3
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#ae81ff">0x90</span>, <span style="color:#ae81ff">0x90</span>, <span style="color:#ae81ff">0xF0</span>, <span style="color:#ae81ff">0x10</span>, <span style="color:#ae81ff">0x10</span>, <span style="color:#75715e">// 4
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#ae81ff">0xF0</span>, <span style="color:#ae81ff">0x80</span>, <span style="color:#ae81ff">0xF0</span>, <span style="color:#ae81ff">0x10</span>, <span style="color:#ae81ff">0xF0</span>, <span style="color:#75715e">// 5
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#ae81ff">0xF0</span>, <span style="color:#ae81ff">0x80</span>, <span style="color:#ae81ff">0xF0</span>, <span style="color:#ae81ff">0x90</span>, <span style="color:#ae81ff">0xF0</span>, <span style="color:#75715e">// 6
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#ae81ff">0xF0</span>, <span style="color:#ae81ff">0x10</span>, <span style="color:#ae81ff">0x20</span>, <span style="color:#ae81ff">0x40</span>, <span style="color:#ae81ff">0x40</span>, <span style="color:#75715e">// 7
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#ae81ff">0xF0</span>, <span style="color:#ae81ff">0x90</span>, <span style="color:#ae81ff">0xF0</span>, <span style="color:#ae81ff">0x90</span>, <span style="color:#ae81ff">0xF0</span>, <span style="color:#75715e">// 8
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#ae81ff">0xF0</span>, <span style="color:#ae81ff">0x90</span>, <span style="color:#ae81ff">0xF0</span>, <span style="color:#ae81ff">0x10</span>, <span style="color:#ae81ff">0xF0</span>, <span style="color:#75715e">// 9
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#ae81ff">0xF0</span>, <span style="color:#ae81ff">0x90</span>, <span style="color:#ae81ff">0xF0</span>, <span style="color:#ae81ff">0x90</span>, <span style="color:#ae81ff">0x90</span>, <span style="color:#75715e">// A
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#ae81ff">0xE0</span>, <span style="color:#ae81ff">0x90</span>, <span style="color:#ae81ff">0xE0</span>, <span style="color:#ae81ff">0x90</span>, <span style="color:#ae81ff">0xE0</span>, <span style="color:#75715e">// B
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#ae81ff">0xF0</span>, <span style="color:#ae81ff">0x80</span>, <span style="color:#ae81ff">0x80</span>, <span style="color:#ae81ff">0x80</span>, <span style="color:#ae81ff">0xF0</span>, <span style="color:#75715e">// C
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#ae81ff">0xE0</span>, <span style="color:#ae81ff">0x90</span>, <span style="color:#ae81ff">0x90</span>, <span style="color:#ae81ff">0x90</span>, <span style="color:#ae81ff">0xE0</span>, <span style="color:#75715e">// D
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#ae81ff">0xF0</span>, <span style="color:#ae81ff">0x80</span>, <span style="color:#ae81ff">0xF0</span>, <span style="color:#ae81ff">0x80</span>, <span style="color:#ae81ff">0xF0</span>, <span style="color:#75715e">// E
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#ae81ff">0xF0</span>, <span style="color:#ae81ff">0x80</span>, <span style="color:#ae81ff">0xF0</span>, <span style="color:#ae81ff">0x80</span>, <span style="color:#ae81ff">0x80</span>, <span style="color:#75715e">// F
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>];
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">pub</span> <span style="color:#66d9ef">fn</span> <span style="color:#a6e22e">load_font</span>(<span style="color:#f92672">&amp;</span><span style="color:#66d9ef">mut</span> self) {
+</span></span><span style="display:flex;"><span>        self.memory[<span style="color:#ae81ff">0</span><span style="color:#f92672">..</span><span style="color:#ae81ff">80</span>].copy_from_slice(<span style="color:#f92672">&amp;</span>FONTS);
+</span></span><span style="display:flex;"><span>    }
+</span></span></code></pre></div><p>It&rsquo;s just a constant <a href="https://doc.rust-lang.org/std/primitive.u8.html">u8</a> array that encodes the <code>0-9A-F</code> charset with the first nibble as follow:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>hexadecimal             binary             visual
+</span></span><span style="display:flex;"><span>   0xF0               <span style="color:#ae81ff">1111</span> <span style="color:#ae81ff">0000</span>             ████
+</span></span><span style="display:flex;"><span>   0x90               <span style="color:#ae81ff">1001</span> <span style="color:#ae81ff">0000</span>             █  █
+</span></span><span style="display:flex;"><span>   0x90               <span style="color:#ae81ff">1001</span> <span style="color:#ae81ff">0000</span>             █  █
+</span></span><span style="display:flex;"><span>   0x90               <span style="color:#ae81ff">1001</span> <span style="color:#ae81ff">0000</span>             █  █
+</span></span><span style="display:flex;"><span>   0xF0               <span style="color:#ae81ff">1111</span> <span style="color:#ae81ff">0000</span>             ████
+</span></span></code></pre></div><p>Then the user has to supply a ROM (Tetris for example) to the emulator, the <code>Emulator</code> will then copy the ROM&rsquo;s bytes into the RAM (<code>memory</code> field of the <code>Emulator</code> struct), starting from offset 512, according to <a href="http://devernay.free.fr/hacks/chip8/C8TECH10.HTM#2.1">cowgod&rsquo;s chip8 technical reference</a>. That&rsquo;s also why the <code>program_counter</code> is initialized with the value 512.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-rust" data-lang="rust"><span style="display:flex;"><span><span style="color:#66d9ef">pub</span> <span style="color:#66d9ef">fn</span> <span style="color:#a6e22e">load_rom</span>(<span style="color:#f92672">&amp;</span><span style="color:#66d9ef">mut</span> self) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">let</span> rom_length <span style="color:#f92672">=</span> self.rom_buffer.borrow().len();
+</span></span><span style="display:flex;"><span>        self.memory[<span style="color:#ae81ff">512</span><span style="color:#f92672">..</span><span style="color:#ae81ff">512</span> <span style="color:#f92672">+</span> rom_length].copy_from_slice(<span style="color:#f92672">&amp;</span>self.rom_buffer.borrow());
+</span></span><span style="display:flex;"><span>        self.rom_buffer.borrow_mut().clear();
+</span></span><span style="display:flex;"><span>    }
+</span></span></code></pre></div><p>Now we&rsquo;re ready to enter the event loop.</p>
+<p>The <a href="https://github.com/bernsteining/chiphuit/blob/master/src/lib.rs#L67">event loop</a> is basically an infinite loop that handles 3 things on each iteration:</p>
+<ul>
+<li>the instruction cycle</li>
+<li>the screen display &amp; audio</li>
+<li>the user input</li>
+</ul>
+<p>NB: <a href="https://rustwasm.github.io/wasm-bindgen/examples/request-animation-frame.html">wasm-bindgen docs</a> provides a nice example of an event loop using requestAnimationFrame.</p>
+<p>Hence, making a chip8 emulator from scratch can be splitted in these 3 parts.</p>
+<p>However, the handling of user input &amp; the way you handle screen depend on the API you&rsquo;re using. A chip8 emulator can be rendered in a terminal since printing white squares is enough to emulate the screen. In our implementation we&rsquo;re targeting WebAssembly so we&rsquo;re going to use browsers APIs.</p>
+<p>Although, the way you handle opcodes has to be very precise and close to the architecture documentation, in order to run any game properly.</p>
+<h1 id="handling-the-instruction-cycle">handling the instruction cycle<a href="#handling-the-instruction-cycle" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>An <a href="https://en.wikipedia.org/wiki/Instruction_cycle">instruction cycle</a> in a VM is often represented as a 3 steps process:</p>
+<ul>
+<li>fetch</li>
+<li>decode</li>
+<li>execute</li>
+</ul>
+<h1 id="fetch">fetch<a href="#fetch" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>Fetching the opcode is done by getting it from the <code>Emulator</code>&rsquo;s <code>memory</code> according to its <code>program counter</code>. A chip8 opcode is made of 4 nibbles (1 <a href="https://en.wikipedia.org/wiki/Nibble">nibble</a> = 4 bits).</p>
+<p>4x4 = 16, so we can store a whole opcode in a <a href="https://doc.rust-lang.org/std/primitive.u16.html">u16</a> (16-bit unsigned integer type).</p>
+<p>Example of an  opcode:</p>
+<table>
+<thead>
+<tr>
+<th>first nibble</th>
+<th>seconde nibble</th>
+<th>third nibble</th>
+<th>fourth nibble</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0001</td>
+<td>0110</td>
+<td>0110</td>
+<td>0101</td>
+</tr>
+</tbody>
+</table>
+<p>According to the documentation, the 1st and 2nd nibbles of the opcode to process lie in <code>memory</code> at offset <code>program_counter</code>, and the 3rd and 4th nibbles at offset <code>program_counter + 1</code>. Since our <code>memory</code> is a <a href="https://doc.rust-lang.org/std/primitive.u8.html">u8</a> array, we build a <a href="https://doc.rust-lang.org/std/primitive.u16.html">u16</a> out of two <a href="https://doc.rust-lang.org/std/primitive.u8.html">u8</a>.</p>
+<p>Then we store each nibble in a <a href="https://doc.rust-lang.org/std/primitive.u8.html">u8</a> (8-bit unsigned integer type) since rust doesn&rsquo;t have a u4 type, and wrap everything in an <code>OpCode</code> struct so that we can access nibbles easily when processing the opcode later.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-rust" data-lang="rust"><span style="display:flex;"><span>    <span style="color:#66d9ef">fn</span> <span style="color:#a6e22e">fetch_opcode</span>(<span style="color:#f92672">&amp;</span><span style="color:#66d9ef">mut</span> self) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">let</span> opcode <span style="color:#f92672">=</span> (self.memory[self.program_counter <span style="color:#66d9ef">as</span> <span style="color:#66d9ef">usize</span>] <span style="color:#66d9ef">as</span> <span style="color:#66d9ef">u16</span>) <span style="color:#f92672">&lt;&lt;</span> <span style="color:#ae81ff">8</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">|</span> self.memory[(self.program_counter <span style="color:#66d9ef">as</span> <span style="color:#66d9ef">usize</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">as</span> <span style="color:#66d9ef">usize</span>] <span style="color:#66d9ef">as</span> <span style="color:#66d9ef">u16</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        self.current_opcode <span style="color:#f92672">=</span> OpCode {
+</span></span><span style="display:flex;"><span>            first_nibble: ((opcode <span style="color:#f92672">&amp;</span> <span style="color:#ae81ff">0xF000</span>) <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">12</span>) <span style="color:#66d9ef">as</span> <span style="color:#66d9ef">u8</span>,
+</span></span><span style="display:flex;"><span>            second_nibble: ((opcode <span style="color:#f92672">&amp;</span> <span style="color:#ae81ff">0x0F00</span>) <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">8</span>) <span style="color:#66d9ef">as</span> <span style="color:#66d9ef">u8</span>,
+</span></span><span style="display:flex;"><span>            third_nibble: ((opcode <span style="color:#f92672">&amp;</span> <span style="color:#ae81ff">0x00F0</span>) <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">4</span>) <span style="color:#66d9ef">as</span> <span style="color:#66d9ef">u8</span>,
+</span></span><span style="display:flex;"><span>            fourth_nibble: (opcode <span style="color:#f92672">&amp;</span> <span style="color:#ae81ff">0x000F</span>) <span style="color:#66d9ef">as</span> <span style="color:#66d9ef">u8</span>,
+</span></span><span style="display:flex;"><span>        };
+</span></span><span style="display:flex;"><span>    }
+</span></span></code></pre></div><p>To do so, we used <a href="https://en.wikipedia.org/wiki/Bitwise_operation">bitwise operators</a>:</p>
+<ul>
+<li>bit shifting ( &raquo; )</li>
+<li>boolean OR (|)</li>
+<li>boolean AND (&amp;).</li>
+</ul>
+<h1 id="decode">decode<a href="#decode" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>Decoding is identifying the opcode, in order to know which function to execute, basically it is a big switch case between all the different types of opcodes (35 in our case).</p>
+<p><a href="https://en.wikipedia.org/wiki/CHIP-8#Opcode_table">Wikipedia</a> provides a nice description of all opcodes, so all we have to do is to reimplement their logic.</p>
+<p>Match arms are pretty handy to pattern match opcodes and should be the way to go when handling opcodes of a VM, whatever the VM in my opinion.</p>
+<p>Yes, coding an emulator is basically implementing each handle function for each opcode by reading its documentation, but in the end you&rsquo;ll be able to play tetris.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-rust" data-lang="rust"><span style="display:flex;"><span><span style="color:#66d9ef">pub</span> <span style="color:#66d9ef">fn</span> <span style="color:#a6e22e">process_opcode</span>(<span style="color:#f92672">&amp;</span><span style="color:#66d9ef">mut</span> self) {
+</span></span><span style="display:flex;"><span>        self.program_counter <span style="color:#f92672">+=</span> <span style="color:#ae81ff">2</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">match</span> (
+</span></span><span style="display:flex;"><span>            self.current_opcode.first_nibble,
+</span></span><span style="display:flex;"><span>            self.current_opcode.second_nibble,
+</span></span><span style="display:flex;"><span>            self.current_opcode.third_nibble,
+</span></span><span style="display:flex;"><span>            self.current_opcode.fourth_nibble,
+</span></span><span style="display:flex;"><span>        ) {
+</span></span><span style="display:flex;"><span>            (<span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0xE</span>, <span style="color:#ae81ff">0xE</span>) <span style="color:#f92672">=&gt;</span> self._00ee(),
+</span></span><span style="display:flex;"><span>            (<span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0xE</span>, <span style="color:#ae81ff">0</span>) <span style="color:#f92672">=&gt;</span> self._00e0(),
+</span></span><span style="display:flex;"><span>            (<span style="color:#ae81ff">0</span>, _, _, _) <span style="color:#f92672">=&gt;</span> self._0nnn(),
+</span></span><span style="display:flex;"><span>            (<span style="color:#ae81ff">1</span>, _, _, _) <span style="color:#f92672">=&gt;</span> self._1nnn(),
+</span></span><span style="display:flex;"><span>            (<span style="color:#ae81ff">2</span>, _, _, _) <span style="color:#f92672">=&gt;</span> self._2nnn(),
+</span></span><span style="display:flex;"><span>            (<span style="color:#ae81ff">3</span>, _, _, _) <span style="color:#f92672">=&gt;</span> self._3xnn(),
+</span></span><span style="display:flex;"><span>            (<span style="color:#ae81ff">4</span>, _, _, _) <span style="color:#f92672">=&gt;</span> self._4xnn(),
+</span></span><span style="display:flex;"><span>            (<span style="color:#ae81ff">5</span>, _, _, <span style="color:#ae81ff">0</span>) <span style="color:#f92672">=&gt;</span> self._5xy0(),
+</span></span><span style="display:flex;"><span>            (<span style="color:#ae81ff">6</span>, _, _, _) <span style="color:#f92672">=&gt;</span> self._6xnn(),
+</span></span><span style="display:flex;"><span>            (<span style="color:#ae81ff">7</span>, _, _, _) <span style="color:#f92672">=&gt;</span> self._7xnn(),
+</span></span><span style="display:flex;"><span>            (<span style="color:#ae81ff">8</span>, _, _, <span style="color:#ae81ff">0</span>) <span style="color:#f92672">=&gt;</span> self._8xy0(),
+</span></span><span style="display:flex;"><span>            (<span style="color:#ae81ff">8</span>, _, _, <span style="color:#ae81ff">1</span>) <span style="color:#f92672">=&gt;</span> self._8xy1(),
+</span></span><span style="display:flex;"><span>            (<span style="color:#ae81ff">8</span>, _, _, <span style="color:#ae81ff">2</span>) <span style="color:#f92672">=&gt;</span> self._8xy2(),
+</span></span><span style="display:flex;"><span>            (<span style="color:#ae81ff">8</span>, _, _, <span style="color:#ae81ff">3</span>) <span style="color:#f92672">=&gt;</span> self._8xy3(),
+</span></span><span style="display:flex;"><span>            (<span style="color:#ae81ff">8</span>, _, _, <span style="color:#ae81ff">4</span>) <span style="color:#f92672">=&gt;</span> self._8xy4(),
+</span></span><span style="display:flex;"><span>            (<span style="color:#ae81ff">8</span>, _, _, <span style="color:#ae81ff">5</span>) <span style="color:#f92672">=&gt;</span> self._8xy5(),
+</span></span><span style="display:flex;"><span>            (<span style="color:#ae81ff">8</span>, _, _, <span style="color:#ae81ff">6</span>) <span style="color:#f92672">=&gt;</span> self._8xy6(),
+</span></span><span style="display:flex;"><span>            (<span style="color:#ae81ff">8</span>, _, _, <span style="color:#ae81ff">7</span>) <span style="color:#f92672">=&gt;</span> self._8xy7(),
+</span></span><span style="display:flex;"><span>            (<span style="color:#ae81ff">8</span>, _, _, <span style="color:#ae81ff">0xE</span>) <span style="color:#f92672">=&gt;</span> self._8xye(),
+</span></span><span style="display:flex;"><span>            (<span style="color:#ae81ff">9</span>, _, _, <span style="color:#ae81ff">0</span>) <span style="color:#f92672">=&gt;</span> self._9xy0(),
+</span></span><span style="display:flex;"><span>            (<span style="color:#ae81ff">0xA</span>, _, _, _) <span style="color:#f92672">=&gt;</span> self.annn(),
+</span></span><span style="display:flex;"><span>            (<span style="color:#ae81ff">0xB</span>, _, _, _) <span style="color:#f92672">=&gt;</span> self.bnnn(),
+</span></span><span style="display:flex;"><span>            (<span style="color:#ae81ff">0xC</span>, _, _, _) <span style="color:#f92672">=&gt;</span> self.cxnn(),
+</span></span><span style="display:flex;"><span>            (<span style="color:#ae81ff">0xD</span>, _, _, _) <span style="color:#f92672">=&gt;</span> self.dxyn(),
+</span></span><span style="display:flex;"><span>            (<span style="color:#ae81ff">0xE</span>, _, <span style="color:#ae81ff">9</span>, <span style="color:#ae81ff">0xE</span>) <span style="color:#f92672">=&gt;</span> self.ex9e(),
+</span></span><span style="display:flex;"><span>            (<span style="color:#ae81ff">0xE</span>, _, <span style="color:#ae81ff">0xA</span>, <span style="color:#ae81ff">1</span>) <span style="color:#f92672">=&gt;</span> self.exa1(),
+</span></span><span style="display:flex;"><span>            (<span style="color:#ae81ff">0xF</span>, _, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">7</span>) <span style="color:#f92672">=&gt;</span> self.fx07(),
+</span></span><span style="display:flex;"><span>            (<span style="color:#ae81ff">0xF</span>, _, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0xA</span>) <span style="color:#f92672">=&gt;</span> self.fx0a(),
+</span></span><span style="display:flex;"><span>            (<span style="color:#ae81ff">0xF</span>, _, <span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">5</span>) <span style="color:#f92672">=&gt;</span> self.fx15(),
+</span></span><span style="display:flex;"><span>            (<span style="color:#ae81ff">0xF</span>, _, <span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">8</span>) <span style="color:#f92672">=&gt;</span> self.fx18(),
+</span></span><span style="display:flex;"><span>            (<span style="color:#ae81ff">0xF</span>, _, <span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">0xE</span>) <span style="color:#f92672">=&gt;</span> self.fx1e(),
+</span></span><span style="display:flex;"><span>            (<span style="color:#ae81ff">0xF</span>, _, <span style="color:#ae81ff">2</span>, <span style="color:#ae81ff">9</span>) <span style="color:#f92672">=&gt;</span> self.fx29(),
+</span></span><span style="display:flex;"><span>            (<span style="color:#ae81ff">0xF</span>, _, <span style="color:#ae81ff">3</span>, <span style="color:#ae81ff">3</span>) <span style="color:#f92672">=&gt;</span> self.fx33(),
+</span></span><span style="display:flex;"><span>            (<span style="color:#ae81ff">0xF</span>, _, <span style="color:#ae81ff">5</span>, <span style="color:#ae81ff">5</span>) <span style="color:#f92672">=&gt;</span> self.fx55(),
+</span></span><span style="display:flex;"><span>            (<span style="color:#ae81ff">0xF</span>, _, <span style="color:#ae81ff">6</span>, <span style="color:#ae81ff">5</span>) <span style="color:#f92672">=&gt;</span> self.fx65(),
+</span></span><span style="display:flex;"><span>            _ <span style="color:#f92672">=&gt;</span> {
+</span></span><span style="display:flex;"><span>                console::log_1(
+</span></span><span style="display:flex;"><span>                    <span style="color:#f92672">&amp;</span>format!(
+</span></span><span style="display:flex;"><span>                        <span style="color:#e6db74">&#34;Unknown opcode: {:X}{:X}{:X}{:X}&#34;</span>,
+</span></span><span style="display:flex;"><span>                        self.current_opcode.first_nibble,
+</span></span><span style="display:flex;"><span>                        self.current_opcode.second_nibble,
+</span></span><span style="display:flex;"><span>                        self.current_opcode.third_nibble,
+</span></span><span style="display:flex;"><span>                        self.current_opcode.fourth_nibble
+</span></span><span style="display:flex;"><span>                    )
+</span></span><span style="display:flex;"><span>                    .into(),
+</span></span><span style="display:flex;"><span>                );
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>As an example we are going to decode by hand an opcode.</p>
+<p>Let&rsquo;s consider the following <a href="%5Bu16%5D(https://doc.rust-lang.org/std/primitive.u16.html)">u16</a> : 1000011001010111</p>
+<p>Let&rsquo;s split it into 4 nibbles as follow:</p>
+<table>
+<thead>
+<tr>
+<th>first nibble</th>
+<th>seconde nibble</th>
+<th>third nibble</th>
+<th>fourth nibble</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1000</td>
+<td>0110</td>
+<td>0101</td>
+<td>0111</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>The 1st nibble is 1000 which is 8 in binary.</li>
+<li>The 4th nibble is 0101 which is 7 in binary.</li>
+</ul>
+<p>Hence it is the 8XY7 opcode, and the 2nd (X) and 3rd nibbles (Y) are going to be processed to modify our emulator state during the execution of the 8XY7 function handler.</p>
+<table>
+<thead>
+<tr>
+<th>first nibble</th>
+<th>seconde nibble</th>
+<th>third nibble</th>
+<th>fourth nibble</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1000 = 8</td>
+<td>0110 = X</td>
+<td>0101 = Y</td>
+<td>0111 = 7</td>
+</tr>
+</tbody>
+</table>
+<h1 id="execute">execute<a href="#execute" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>Executing is calling the opcode handle function, it&rsquo;s the right hand side of the match arm.</p>
+<p>For example, here&rsquo;s the function handle for the 8XY7 opcode we just decoded:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-rust" data-lang="rust"><span style="display:flex;"><span>    <span style="color:#e6db74">/// Sets VX to VY minus VX. VF is set to 0 when there&#39;s a borrow,
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74"></span>    <span style="color:#e6db74">/// and 1 when there is not.
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74"></span>    <span style="color:#e6db74">/// vx = vy - vx
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74"></span>    <span style="color:#66d9ef">fn</span> <span style="color:#a6e22e">_8xy7</span>(<span style="color:#f92672">&amp;</span><span style="color:#66d9ef">mut</span> self) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">let</span> substraction <span style="color:#f92672">=</span> (self.get_vy() <span style="color:#f92672">-</span> self.get_vx()) <span style="color:#66d9ef">as</span> <span style="color:#66d9ef">i8</span>;
+</span></span><span style="display:flex;"><span>        self.registers[<span style="color:#ae81ff">15</span>] <span style="color:#f92672">=</span> self.carry(substraction);
+</span></span><span style="display:flex;"><span>        self.registers[self.current_opcode.second_nibble <span style="color:#66d9ef">as</span> <span style="color:#66d9ef">usize</span>] <span style="color:#f92672">=</span> substraction <span style="color:#66d9ef">as</span> <span style="color:#66d9ef">u8</span>;
+</span></span><span style="display:flex;"><span>    }
+</span></span></code></pre></div><p>Another example with the function handle for the 8XY6 opcode:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-rust" data-lang="rust"><span style="display:flex;"><span><span style="color:#e6db74">/// Stores the least significant bit of VX in VF and then shifts
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">/// VX to the right by 1.
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">/// vx &gt;&gt;= 1
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74"></span><span style="color:#66d9ef">fn</span> <span style="color:#a6e22e">_8xy6</span>(<span style="color:#f92672">&amp;</span><span style="color:#66d9ef">mut</span> self) {
+</span></span><span style="display:flex;"><span>    self.registers[<span style="color:#ae81ff">15</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span><span style="color:#66d9ef">u8</span> <span style="color:#f92672">&amp;</span> self.get_vx();
+</span></span><span style="display:flex;"><span>    self.registers[self.current_opcode.second_nibble <span style="color:#66d9ef">as</span> <span style="color:#66d9ef">usize</span>] <span style="color:#f92672">&gt;&gt;=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>You&rsquo;ll notice the presence of <a href="https://github.com/bernsteining/chiphuit/blob/master/src/cpu.rs#L242">get_vy()</a>, <a href="https://github.com/bernsteining/chiphuit/blob/master/src/cpu.rs#L236">get_vx()</a> and the <a href="https://github.com/bernsteining/chiphuit/blob/master/src/cpu.rs#L235">carry</a> functions.</p>
+<p>All the opcodes share common patterns so it&rsquo;s a good idea to factorize common patterns in separate functions in order to reuse code, the code usually looks cleaner this way.</p>
+<p>NB: A very handy way to ensure all opcodes&rsquo; implementation correctness is by loading <a href="https://github.com/corax89/chip8-test-rom">this ROM</a> in your emulator. You&rsquo;ll be able to see which opcode handle function is incorrect. Helped me a lot when I didn&rsquo;t have my debugger yet.</p>
+<h2 id="handling-the-screen-display">handling the screen display<a href="#handling-the-screen-display" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
+<p>In order to display the screen of our <code>Emulator</code> we have 2 Web APIs for this:</p>
+<ul>
+<li><a href="https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API">WebGL</a></li>
+<li><a href="https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API">Canvas</a></li>
+</ul>
+<p>WebGL kinda brings OpenGL into the browser which can be very useful when rendering complex geometry and shaders, whereas Canvas offers a 2D rectangular space to draw in a simple manner.</p>
+<p>Since chip8 doesn&rsquo;t involve 3D geometry nor shaders, but only 32x64 black &amp; white pixels, using Canvas API is much more appropriate IMO for our use case :).</p>
+<p>A great example of the Canvas API is provided by the <a href="https://rustwasm.github.io/wasm-bindgen/examples/julia.html">wasm-bindgen</a> repo, where a <a href="https://en.wikipedia.org/wiki/Julia_set">julia set</a> is rendered.</p>
+<p>Therefore, in our event loop we&rsquo;re going to update the Canvas from our <code>Emulator</code>&rsquo;s <code>screen</code> field. To do so, we iterate over our <code>screen</code> array and convert each boolean into a <a href="https://en.wikipedia.org/wiki/RGBA_color_model">RGBA</a> pixel in order to build an <a href="https://developer.mozilla.org/en-US/docs/Web/API/ImageData">ImageData</a> that our Canvas will display in the Browser.</p>
+<p>If we implemented the opcodes logic correctly, our <code>Emulator</code>&rsquo;s <code>screen</code> should contain <code>false</code> for every pixel turned off, and <code>true</code> for every pixel turned on. In <a href="https://en.wikipedia.org/wiki/RGBA_color_model">RGBA</a> <code>[0, 0, 0, 0]</code> represents and black pixel and <code>[255, 255, 255, 255]</code> a white pixel.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-rust" data-lang="rust"><span style="display:flex;"><span><span style="color:#66d9ef">pub</span> <span style="color:#66d9ef">fn</span> <span style="color:#a6e22e">draw_screen</span>(context: <span style="color:#66d9ef">&amp;</span><span style="color:#a6e22e">CanvasRenderingContext2d</span>, screen: [<span style="color:#66d9ef">bool</span>; <span style="color:#ae81ff">64</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">32</span>]) {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">let</span> rgba_screen: Vec<span style="color:#f92672">&lt;</span><span style="color:#66d9ef">u8</span><span style="color:#f92672">&gt;</span> <span style="color:#f92672">=</span> screen
+</span></span><span style="display:flex;"><span>        .iter()
+</span></span><span style="display:flex;"><span>        .flat_map(<span style="color:#f92672">|</span>x<span style="color:#f92672">|</span> <span style="color:#66d9ef">match</span> x {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">false</span> <span style="color:#f92672">=&gt;</span> [<span style="color:#ae81ff">0</span><span style="color:#66d9ef">u8</span>; <span style="color:#ae81ff">4</span>],
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">true</span> <span style="color:#f92672">=&gt;</span> [<span style="color:#ae81ff">255</span><span style="color:#66d9ef">u8</span>; <span style="color:#ae81ff">4</span>],
+</span></span><span style="display:flex;"><span>        })
+</span></span><span style="display:flex;"><span>        .collect();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">let</span> frame <span style="color:#f92672">=</span>
+</span></span><span style="display:flex;"><span>        ImageData::new_with_u8_clamped_array_and_sh(Clamped(<span style="color:#f92672">&amp;</span>rgba_screen), WIDTH, HEIGHT).unwrap();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    context.put_image_data(<span style="color:#f92672">&amp;</span>frame, <span style="color:#ae81ff">0.0</span>, <span style="color:#ae81ff">0.0</span>).unwrap();
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><ul>
+<li>
+<p><code>[0u8; 4]</code> is just a handy way to create an u8 array of length 4 filled with zeros so is <code>[255u8; 4]</code> for an u8 array filled with 255s.</p>
+</li>
+<li>
+<p><code>flat_map</code> is just a way to iterate over <code>screen</code> and to avoid nesting arrays in <code>rgba_screen</code>.</p>
+</li>
+</ul>
+<p>Then all we will have to do is call <code>draw_screen</code> in our event loop to refresh the emulator&rsquo;s screen in our Browser&rsquo;s Canvas.</p>
+<p>There&rsquo;s only 1 opcode that handles the drawing of the sprites on a chip8 emulator screen, it&rsquo;s the <code>DXYN</code>. It does so by <a href="https://en.wikipedia.org/wiki/Exclusive_or">XOR</a>ing rectangle areas with the previous frame, you can see its implementation <a href="https://github.com/bernsteining/chiphuit/blob/master/src/cpu.rs#L436">here</a>.</p>
+<h2 id="handling-audio">handling audio<a href="#handling-audio" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
+<p>The <code>Emulator</code> struct has a <a href="https://doc.rust-lang.org/std/primitive.u8.html">u8</a> <code>sound_timer</code>. We should hear a &lsquo;beep&rsquo; noise if <code>sound_timer</code> has a positive value and decrement it, so the code is pretty straightforward:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-rust" data-lang="rust"><span style="display:flex;"><span><span style="color:#66d9ef">pub</span> <span style="color:#66d9ef">fn</span> <span style="color:#a6e22e">sound</span>(emulator: <span style="color:#66d9ef">&amp;</span><span style="color:#a6e22e">mut</span> cpu::Emulator, audio_context: <span style="color:#66d9ef">&amp;</span><span style="color:#a6e22e">FmOsc</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">match</span> emulator.sound_timer {
+</span></span><span style="display:flex;"><span>        <span style="color:#ae81ff">0</span> <span style="color:#f92672">=&gt;</span> audio_context.gain.gain().set_value(<span style="color:#ae81ff">0.0</span>),
+</span></span><span style="display:flex;"><span>        _ <span style="color:#f92672">=&gt;</span> {
+</span></span><span style="display:flex;"><span>            audio_context.gain.gain().set_value(<span style="color:#ae81ff">0.04</span>);
+</span></span><span style="display:flex;"><span>            emulator.sound_timer <span style="color:#f92672">-=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Once again, <a href="https://rustwasm.github.io/wasm-bindgen/examples/web-audio.html">wasm-bindgen</a> provides an example of how to use the <a href="https://developer.mozilla.org/en-US/docs/Web/API/AudioContext">AudioContext API</a>.</p>
+<h2 id="handling-user-input">handling user input<a href="#handling-user-input" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
+<p>We want buttons that from the browser&rsquo;s <a href="https://en.wikipedia.org/wiki/Document_Object_Model">DOM</a> would change our <code>Emulator</code>&rsquo;s <code>keypad</code> field values, but we also want it to work on ALL devices that can run a browser, touchscreens included.</p>
+<p>Therefore, we want the user to be able to do a keypress by:</p>
+<ul>
+<li>clicking with a mouse on the button</li>
+<li>pressing the key on his physical keyboard</li>
+<li>touching a key on the virtual keyboard on a touchscreen device</li>
+</ul>
+<p>First of all, we have to initialize our keypad in the GUI, then we will add callbacks to them so they can affect our <code>Emulator</code> struct.</p>
+<p>Initializing the keypad is basically just creating a &lsquo;keypad&rsquo; HTML element, setting its id and class name, and filling it with its 16 keys (1234QWERASDFZXCV). In their initialization loop, we hook them with the callbacks we&rsquo;re going to define.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-rust" data-lang="rust"><span style="display:flex;"><span><span style="color:#66d9ef">pub</span> <span style="color:#66d9ef">fn</span> <span style="color:#a6e22e">set_keypad</span>(emulator_keypad: <span style="color:#66d9ef">&amp;</span><span style="color:#a6e22e">Rc</span><span style="color:#f92672">&lt;</span>RefCell<span style="color:#f92672">&lt;</span>[<span style="color:#66d9ef">bool</span>; <span style="color:#ae81ff">16</span>]<span style="color:#f92672">&gt;&gt;</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">let</span> keypad <span style="color:#f92672">=</span> document()
+</span></span><span style="display:flex;"><span>        .create_element(<span style="color:#e6db74">&#34;keypad&#34;</span>)
+</span></span><span style="display:flex;"><span>        .expect(<span style="color:#e6db74">&#34;should have a keypad.&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    keypad.set_id(<span style="color:#e6db74">&#34;keypad&#34;</span>);
+</span></span><span style="display:flex;"><span>    keypad.set_class_name(<span style="color:#e6db74">&#34;keypad-base&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    append_to_body(<span style="color:#f92672">&amp;</span>keypad);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> (index, <span style="color:#f92672">&amp;</span>key) <span style="color:#66d9ef">in</span> [
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;1&#34;</span>, <span style="color:#e6db74">&#34;2&#34;</span>, <span style="color:#e6db74">&#34;3&#34;</span>, <span style="color:#e6db74">&#34;4&#34;</span>, <span style="color:#e6db74">&#34;Q&#34;</span>, <span style="color:#e6db74">&#34;W&#34;</span>, <span style="color:#e6db74">&#34;E&#34;</span>, <span style="color:#e6db74">&#34;R&#34;</span>, <span style="color:#e6db74">&#34;A&#34;</span>, <span style="color:#e6db74">&#34;S&#34;</span>, <span style="color:#e6db74">&#34;D&#34;</span>, <span style="color:#e6db74">&#34;F&#34;</span>, <span style="color:#e6db74">&#34;Z&#34;</span>, <span style="color:#e6db74">&#34;X&#34;</span>, <span style="color:#e6db74">&#34;C&#34;</span>, <span style="color:#e6db74">&#34;V&#34;</span>,
+</span></span><span style="display:flex;"><span>    ]
+</span></span><span style="display:flex;"><span>    .iter()
+</span></span><span style="display:flex;"><span>    .enumerate()
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">let</span> keypad_key <span style="color:#f92672">=</span> document().create_element(<span style="color:#e6db74">&#34;div&#34;</span>).unwrap();
+</span></span><span style="display:flex;"><span>        keypad_key.set_id(key);
+</span></span><span style="display:flex;"><span>        keypad_key.set_inner_html(key);
+</span></span><span style="display:flex;"><span>        keypad_key.set_class_name(<span style="color:#e6db74">&#34;key&#34;</span>);
+</span></span><span style="display:flex;"><span>        keypad
+</span></span><span style="display:flex;"><span>            .append_child(<span style="color:#f92672">&amp;</span>Node::from(keypad_key.clone()))
+</span></span><span style="display:flex;"><span>            .unwrap();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// Handle clicks on virtual keypad
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        set_callback_to_button(<span style="color:#66d9ef">true</span>, <span style="color:#f92672">&amp;</span>keypad_key, emulator_keypad, index);
+</span></span><span style="display:flex;"><span>        set_callback_to_button(<span style="color:#66d9ef">false</span>, <span style="color:#f92672">&amp;</span>keypad_key, emulator_keypad, index);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// Handle keyboard events
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        set_callback_to_key(<span style="color:#66d9ef">true</span>, key.to_string(), emulator_keypad, index);
+</span></span><span style="display:flex;"><span>        set_callback_to_key(<span style="color:#66d9ef">false</span>, key.to_string(), emulator_keypad, index);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>To define a callback upon a specific event, we have to use <a href="https://rustwasm.github.io/wasm-bindgen/examples/closures.html">event handlers</a>. This can be done using rust closures, and once again <a href="https://rustwasm.github.io/wasm-bindgen/examples/closures.html">wasm-bindgen</a> provides a nice example of how to do so.</p>
+<p>Therefore, to fulfill our needs, we define two functions:</p>
+<ul>
+<li><a href="https://github.com/bernsteining/chiphuit/blob/master/src/utils.rs#L118"><code>set_callback_to_key</code></a></li>
+<li><a href="https://github.com/bernsteining/chiphuit/blob/master/src/utils.rs#L77"><code>set_callback_to_button</code></a>.</li>
+</ul>
+<p><a href="https://github.com/bernsteining/chiphuit/blob/master/src/utils.rs#L118"><code>set_callback_to_key</code></a> adds an event listener to handle keyboard event with the <a href="https://developer.mozilla.org/en-US/docs/Web/API/Document/keyup_event">keyup</a> and <a href="https://developer.mozilla.org/en-US/docs/Web/API/Document/keydown_event">keydown</a> events. These allow the user to play on the emulator using his physical keyboard.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-rust" data-lang="rust"><span style="display:flex;"><span><span style="color:#66d9ef">pub</span> <span style="color:#66d9ef">fn</span> <span style="color:#a6e22e">set_callback_to_key</span>(
+</span></span><span style="display:flex;"><span>    press: <span style="color:#66d9ef">bool</span>,
+</span></span><span style="display:flex;"><span>    key: String,
+</span></span><span style="display:flex;"><span>    keypad: <span style="color:#66d9ef">&amp;</span><span style="color:#a6e22e">Rc</span><span style="color:#f92672">&lt;</span>RefCell<span style="color:#f92672">&lt;</span>[<span style="color:#66d9ef">bool</span>; <span style="color:#ae81ff">16</span>]<span style="color:#f92672">&gt;&gt;</span>,
+</span></span><span style="display:flex;"><span>    index: <span style="color:#66d9ef">usize</span>,
+</span></span><span style="display:flex;"><span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">let</span> keypad_clone <span style="color:#f92672">=</span> Rc::clone(<span style="color:#f92672">&amp;</span>keypad);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">let</span> callback <span style="color:#f92672">=</span> Closure::wrap(Box::new(<span style="color:#66d9ef">move</span> <span style="color:#f92672">|</span>_event: <span style="color:#a6e22e">web_sys</span>::KeyboardEvent<span style="color:#f92672">|</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> _event.key().to_uppercase() <span style="color:#f92672">==</span> key {
+</span></span><span style="display:flex;"><span>            keypad_clone.borrow_mut()[index] <span style="color:#f92672">=</span> press;
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }) <span style="color:#66d9ef">as</span> Box<span style="color:#f92672">&lt;</span><span style="color:#66d9ef">dyn</span> FnMut(_)<span style="color:#f92672">&gt;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    web_sys::window()
+</span></span><span style="display:flex;"><span>        .unwrap()
+</span></span><span style="display:flex;"><span>        .add_event_listener_with_callback(
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">match</span> press {
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">true</span> <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#34;keydown&#34;</span>,
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">false</span> <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#34;keyup&#34;</span>,
+</span></span><span style="display:flex;"><span>            },
+</span></span><span style="display:flex;"><span>            callback.as_ref().unchecked_ref(),
+</span></span><span style="display:flex;"><span>        )
+</span></span><span style="display:flex;"><span>        .unwrap();
+</span></span><span style="display:flex;"><span>    callback.forget();
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p><a href="https://github.com/bernsteining/chiphuit/blob/master/src/utils.rs#L77"><code>set_callback_to_button</code></a> adds 2 event listeners so the user can play with the virtual keypad in the GUI:</p>
+<ul>
+<li><a href="https://developer.mozilla.org/en-US/docs/Web/API/Element/mouseup_event">mouseup</a> &amp; <a href="https://developer.mozilla.org/en-US/docs/Web/API/Element/mousedown_event">mousedown</a> to allow the user to play by clicking the virtual keypad with a mouse.</li>
+<li><a href="https://developer.mozilla.org/en-US/docs/Web/API/Element/touchstart_event">touchstart</a> &amp; <a href="https://developer.mozilla.org/en-US/docs/Web/API/Element/touchend_event">touchend</a> to allow the user to play on a touchscreen.</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-rust" data-lang="rust"><span style="display:flex;"><span><span style="color:#66d9ef">pub</span> <span style="color:#66d9ef">fn</span> <span style="color:#a6e22e">set_callback_to_button</span>(
+</span></span><span style="display:flex;"><span>    press: <span style="color:#66d9ef">bool</span>,
+</span></span><span style="display:flex;"><span>    button: <span style="color:#66d9ef">&amp;</span><span style="color:#a6e22e">Element</span>,
+</span></span><span style="display:flex;"><span>    keypad: <span style="color:#66d9ef">&amp;</span><span style="color:#a6e22e">Rc</span><span style="color:#f92672">&lt;</span>RefCell<span style="color:#f92672">&lt;</span>[<span style="color:#66d9ef">bool</span>; <span style="color:#ae81ff">16</span>]<span style="color:#f92672">&gt;&gt;</span>,
+</span></span><span style="display:flex;"><span>    index: <span style="color:#66d9ef">usize</span>,
+</span></span><span style="display:flex;"><span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">let</span> keypad_clone <span style="color:#f92672">=</span> Rc::clone(<span style="color:#f92672">&amp;</span>keypad);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">let</span> mouse_callback <span style="color:#f92672">=</span> Closure::wrap(Box::new(<span style="color:#66d9ef">move</span> <span style="color:#f92672">|</span>_event: <span style="color:#a6e22e">web_sys</span>::MouseEvent<span style="color:#f92672">|</span> {
+</span></span><span style="display:flex;"><span>        keypad_clone.borrow_mut()[index] <span style="color:#f92672">=</span> press;
+</span></span><span style="display:flex;"><span>    }) <span style="color:#66d9ef">as</span> Box<span style="color:#f92672">&lt;</span><span style="color:#66d9ef">dyn</span> FnMut(_)<span style="color:#f92672">&gt;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    button
+</span></span><span style="display:flex;"><span>        .add_event_listener_with_callback(
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">match</span> press {
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">true</span> <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#34;mousedown&#34;</span>,
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">false</span> <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#34;mouseup&#34;</span>,
+</span></span><span style="display:flex;"><span>            },
+</span></span><span style="display:flex;"><span>            mouse_callback.as_ref().unchecked_ref(),
+</span></span><span style="display:flex;"><span>        )
+</span></span><span style="display:flex;"><span>        .unwrap();
+</span></span><span style="display:flex;"><span>    mouse_callback.forget();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">let</span> keypad_clone <span style="color:#f92672">=</span> Rc::clone(<span style="color:#f92672">&amp;</span>keypad);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">let</span> touch_callback <span style="color:#f92672">=</span> Closure::wrap(Box::new(<span style="color:#66d9ef">move</span> <span style="color:#f92672">|</span>_event: <span style="color:#a6e22e">web_sys</span>::TouchEvent<span style="color:#f92672">|</span> {
+</span></span><span style="display:flex;"><span>        keypad_clone.borrow_mut()[index] <span style="color:#f92672">=</span> press;
+</span></span><span style="display:flex;"><span>    }) <span style="color:#66d9ef">as</span> Box<span style="color:#f92672">&lt;</span><span style="color:#66d9ef">dyn</span> FnMut(_)<span style="color:#f92672">&gt;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    button
+</span></span><span style="display:flex;"><span>        .add_event_listener_with_callback(
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">match</span> press {
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">true</span> <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#34;touchstart&#34;</span>,
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">false</span> <span style="color:#f92672">=&gt;</span> <span style="color:#e6db74">&#34;touchend&#34;</span>,
+</span></span><span style="display:flex;"><span>            },
+</span></span><span style="display:flex;"><span>            touch_callback.as_ref().unchecked_ref(),
+</span></span><span style="display:flex;"><span>        )
+</span></span><span style="display:flex;"><span>        .unwrap();
+</span></span><span style="display:flex;"><span>    touch_callback.forget();
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>SPOILER ALERT: user input isn&rsquo;t just about key presses :)</p>
+<p>Indeed, as we said before, the user has to provide the emulator a ROM to run.</p>
+<p>Handling user file input in rust was kind of a pain in the neck since there was no example of it in the wasm-bindgen documentation, and people on stackoverflow were wondering how to achieve it.</p>
+<p>Eventually I found a way to do it with a mix of <a href="https://docs.rs/js-sys/latest/js_sys/">js-sys</a> &amp; <a href="https://docs.rs/web-sys/latest/web_sys/index.html">web-sys</a> by using the <a href="https://developer.mozilla.org/en-US/docs/Web/API/FileReader">FileReader API</a>, this was a great opportunity to <a href="https://stackoverflow.com/a/70732758/12868222">contribute</a> to stackoverflow for the first time.</p>
+<h2 id="a-bit-of-gui-graphical-user-interface">a bit of GUI (Graphical User Interface)<a href="#a-bit-of-gui-graphical-user-interface" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
+<p>Since we&rsquo;re in a browser, we can style up the emulator buttons with CSS.</p>
+<p>Basically, it displays the keypad in a grid, sets some hovering effects on buttons, and allows 2 orientation modes (landscape &amp; portrait).</p>
+<h1 id="writing-a-debugger">writing a debugger<a href="#writing-a-debugger" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>A <a href="https://en.wikipedia.org/wiki/Debugger">debugger</a> is a computer program used to view, analyze, instrument &amp; edit other programs, in our case: the chip8 emulator. The goal is to allow the edition of the emulator at runtime from the browser, to offer a complete control of the <code>Emulator</code>&rsquo;s struct fields, RAM included (<code>memory</code> field).</p>
+<p>Hence, the debugger should be able to do a few things with our <code>Emulator</code> struct:</p>
+<ul>
+<li>offer a view of its field values</li>
+<li>modify its fields values</li>
+<li>make a snapshot of it</li>
+<li>trace its execution at each CPU cycle</li>
+</ul>
+<p>Thanks to <a href="https://serde.rs/">serde</a>, <a href="https://en.wikipedia.org/wiki/Serialization">serialization</a> allows to load and export our <code>Emulator</code> in JSON by just prepending our <code>Emulator</code> struct as follow:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-rust" data-lang="rust"><span style="display:flex;"><span><span style="color:#75715e">#[derive(Serialize, Deserialize)]</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">pub</span> <span style="color:#66d9ef">struct</span> <span style="color:#a6e22e">Emulator</span> {
+</span></span><span style="display:flex;"><span>    current_opcode: <span style="color:#a6e22e">OpCode</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">/// [...]
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74"></span>}
+</span></span></code></pre></div><p>This way we can build a debugger:</p>
+<ul>
+<li>the <code>Serialize</code> trait on our <code>Emulator</code> struct allows us to export it in json</li>
+<li>the <code>Deserialize</code> trait allows to spawn a new <code>Emulator</code> instance from a json.</li>
+</ul>
+<p>So if you want to change the <code>Emulator</code>&rsquo;s fields values, pause the emulator, copy the snapshot in JSON format to your clipboard (copy button), edit the JSON values, and load your modified JSON (load button).</p>
+<p>If you&rsquo;re curious enough you can check the code of <a href="https://github.com/bernsteining/chiphuit/blob/master/src/debugger.rs">debugger.rs</a>, or try to load a <a href="https://raw.githubusercontent.com/bernsteining/chiphuit/master/assets/tetris_snapshot.json">Tetris snapshot</a> I made in the emulator.</p>
+<h1 id="compiling--serving-the-emulator">compiling &amp; serving the emulator<a href="#compiling--serving-the-emulator" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>Compiling is a 2 steps procedure. First, we build the project using <code>cargo</code>:</p>
+<pre tabindex="0"><code>cargo build --release
+</code></pre><p>Then, we have to use <a href="https://github.com/rustwasm/wasm-bindgen">wasm-bindgen</a>:</p>
+<pre tabindex="0"><code>wasm-bindgen ./target/wasm32-unknown-unknown/release/chiphuit.wasm \
+--out-dir build --no-typescript --target no-modules \
+--remove-name-section --remove-producers-section \
+--omit-default-module-path --omit-imports
+</code></pre><p>The compilation emits 2 build files in our build directory:</p>
+<ul>
+<li><code>chiphuit_bg.wasm</code>, our emulator.</li>
+<li><code>chiphuit.js</code>, JavaScript glue code necessary to load our WebAssembly bytecode.</li>
+</ul>
+<p>In our build directory lies an HTML file and a CSS file, both necessary to load our program and display the GUI made with CSS in a browser:</p>
+<pre tabindex="0"><code>build/
+├── chiphuit_bg.wasm
+├── chiphuit.css
+├── chiphuit.js
+├── index.html
+└── favicon.ico
+</code></pre><p>Finally, serve this directory to play the emulator in your favorite browser.</p>
+<h1 id="troubleshooting">troubleshooting<a href="#troubleshooting" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>One of my first mistakes was to render the screen of the <code>Emulator</code> for each CPU cycle. This caused the emulator to be very slow since refreshing the screen has a cost and that chip8 CPU cycles by definition happen a lot per second.</p>
+<p>Hence, I refreshed the screen every 10 CPU cycles and the emulator ran as expected.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-rust" data-lang="rust"><span style="display:flex;"><span>[<span style="color:#f92672">..</span>.] main function
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> <span style="color:#f92672">*</span>emulator.running.borrow() {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">for</span> _ <span style="color:#66d9ef">in</span> <span style="color:#ae81ff">0</span><span style="color:#f92672">..</span><span style="color:#ae81ff">10</span> {
+</span></span><span style="display:flex;"><span>                emulator.cycle();
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>            emulator.update_emulator_state(<span style="color:#f92672">&amp;</span>debugger.element.rows());
+</span></span><span style="display:flex;"><span>            graphics::draw_screen(<span style="color:#f92672">&amp;</span>canvas, emulator.screen);
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>[<span style="color:#f92672">..</span>.]
+</span></span></code></pre></div><p>Also, the emulator wouldn&rsquo;t respond as expected on touchscreen, it would:</p>
+<ul>
+<li>select the text in the keypad</li>
+<li>zoom on double-clicks</li>
+</ul>
+<p>This can be mitigated on the CSS side by adding a <a href="https://developer.mozilla.org/en-US/docs/Web/CSS/touch-action">touch-action</a> property to the body.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-css" data-lang="css"><span style="display:flex;"><span><span style="color:#f92672">body</span> {
+</span></span><span style="display:flex;"><span>  <span style="color:#960050;background-color:#1e0010">[...]</span>
+</span></span><span style="display:flex;"><span>  touch-action: <span style="color:#66d9ef">none</span>;
+</span></span><span style="display:flex;"><span>  <span style="color:#960050;background-color:#1e0010">[...]</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h1 id="result">result<a href="#result" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>An instance of the emulator is hosted <a href="https://chiphuit.glitch.me/">here</a>, you can supply the emulator ROMs from <a href="https://github.com/kripod/chip8-roms/tree/master/games">here</a> to play several games.</p>
+<p>If you&rsquo;re too lazy to click and download a ROM, here&rsquo;s a video of the emulator running on an iPhone (more precisely it runs in Safari&rsquo;s <a href="https://en.wikipedia.org/wiki/Browser_engine">browser engine</a> <a href="https://en.wikipedia.org/wiki/WebKit">Webkit</a>).</p>
+
+<div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;">
+  <iframe src="https://www.youtube.com/embed/Ix_EGr-9nWQ" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border:0;" allowfullscreen title="YouTube Video"></iframe>
+</div>
+
+<p>Also, the source code is open source and available <a href="https://github.com/bernsteining/chiphuit">here</a>.</p>
+<h1 id="whats-next">what&rsquo;s next<a href="#whats-next" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<p>First, <a href="https://chip-8.github.io/extensions/">chip8 instruction set can be extended</a>, so we could modify the emulator to run even more ROMs if we wanted to.</p>
+<p>Also, there are 2 possible improvements to the emulator:</p>
+<ul>
+<li>targeting another architecture than WebAssembly using <a href="https://doc.rust-lang.org/reference/conditional-compilation.html">conditional compilation</a></li>
+<li>using a GUI library to build a fully fledged debugger</li>
+</ul>
+<p>If I use <a href="https://doc.rust-lang.org/reference/conditional-compilation.html">conditional compilation</a> to target another architecture, I would have to remake the front since my current GUI targets a browser. So in both case I&rsquo;m going to have remake the GUI.</p>
+<p>Thus, I&rsquo;m currently looking for a GUI library that would tackle both problems among these libraries:</p>
+<ul>
+<li><a href="https://github.com/emilk/egui">egui</a></li>
+<li><a href="https://github.com/linebender/druid">druid</a></li>
+<li><a href="https://github.com/iced-rs/iced">iced</a></li>
+<li><a href="https://github.com/slint-ui/slint">Slint (previously SixtyFPS)</a></li>
+<li><a href="https://github.com/imgui-rs/imgui-rs">imgui-rs</a></li>
+</ul>
+<p>I&rsquo;m quite a fan of <a href="https://github.com/emilk/egui">egui</a> at the moment but haven&rsquo;t tested others yet.</p>
+<p>Anyway, maybe I&rsquo;ll start another emulator with that in mind soon and keep that one at this state, according to the <a href="https://www.reddit.com/r/EmuDev/">emudev</a> community GameBoy is the next emulator to build after chip8.</p>
+<h1 id="documentation--links">Documentation &amp; links<a href="#documentation--links" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
+<ul>
+<li><a href="https://en.wikipedia.org/wiki/CHIP-8#Opcode_table">chip8 wikipedia</a></li>
+<li><a href="https://rustwasm.github.io/wasm-bindgen/examples/">wasm-bindgen repo examples</a></li>
+<li><a href="http://devernay.free.fr/hacks/chip8/chip8def.htm">cowgod&rsquo;s chip8 technical reference</a></li>
+<li><a href="https://www.reddit.com/r/EmuDev/">emudev community reddit</a></li>
+<li><a href="https://discord.gg/dkmJAes">emudev community discord</a></li>
+<li><a href="https://chip-8.github.io/links/">chip8 links</a></li>
+</ul>
+
+      </div></div>
+
+  
+  
+  
+
+  
+
+</div>
+
+  </div>
+
+  
+    <footer class="footer">
+  <div class="footer__inner">
+    
+      <div class="copyright">
+        <span>© 2022 Powered by <a href="http://gohugo.io">Hugo</a></span>
+    
+        <span>:: Theme made by <a href="https://twitter.com/panr">panr</a></span>
+      </div>
+  </div>
+</footer>
+
+<script src="/assets/main.js"></script>
+<script src="/assets/prism.js"></script>
+
+
+
+
+
+
+
+  
+</div>
+
+</body>
+</html>

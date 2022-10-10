@@ -1,0 +1,620 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Posts on Bernie&#39;s lair</title>
+    <link>/posts/</link>
+    <description>Recent content in Posts on Bernie&#39;s lair</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Fri, 06 Aug 2021 16:15:42 +0200</lastBuildDate><atom:link href="/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>web-sys journey: writing a chip8 emulator in rust</title>
+      <link>/posts/writing_a_chip8_emulator_in_rust/</link>
+      <pubDate>Fri, 06 Aug 2021 16:15:42 +0200</pubDate>
+      
+      <guid>/posts/writing_a_chip8_emulator_in_rust/</guid>
+      <description>intro I&amp;rsquo;ve always been curious about emulation, hypervisors etc so I started to read about it and came accross an awesome blog post explaining the basics of emulation with chip8 as an example.
+It demystified a lot and didn&amp;rsquo;t spoiled too much so it motivated me a lot to write my own emulator from scratch using rust and targeting WebAssembly.
+First of all I didn&amp;rsquo;t want to use third party crates that would have spoiled the journey, such as gloo.</description>
+      <content>
+  &lt;img src=&#34;/images/chip8/emulator_debugger.png&#34;  class=&#34;left&#34;  /&gt;
+
+
+&lt;h1 id=&#34;intro&#34;&gt;intro&lt;/h1&gt;
+&lt;p&gt;I&amp;rsquo;ve always been curious about emulation, hypervisors etc so I started to read about it and came accross an &lt;a href=&#34;https://multigesture.net/articles/how-to-write-an-emulator-chip-8-interpreter/&#34;&gt;awesome blog post&lt;/a&gt; explaining the basics of emulation with chip8 as an example.&lt;/p&gt;
+&lt;p&gt;It demystified a lot and didn&amp;rsquo;t spoiled too much so it motivated me a lot to write my own emulator from scratch using rust and targeting WebAssembly.&lt;/p&gt;
+&lt;p&gt;First of all I didn&amp;rsquo;t want to use third party crates that would have spoiled the journey, such as &lt;a href=&#34;https://github.com/rustwasm/gloo&#34;&gt;gloo&lt;/a&gt;. I wanted to learn to use &lt;a href=&#34;https://docs.rs/web-sys/latest/web_sys/index.html&#34;&gt;web-sys&lt;/a&gt; in order to control as much as possible the interaction between my code and the browser. This allowed me to learn a lot about the browsers APIs since &lt;a href=&#34;https://docs.rs/web-sys/latest/web_sys/index.html&#34;&gt;web-sys&lt;/a&gt; types are directly mapped with the &lt;a href=&#34;https://developer.mozilla.org/en-US/docs/Web/API&#34;&gt;standard Web API&lt;/a&gt;. According to its documentation, &lt;a href=&#34;https://docs.rs/web-sys/latest/web_sys/index.html&#34;&gt;web-sys&lt;/a&gt; &amp;ldquo;is sort of like the libc crate, but for the Web&amp;rdquo;.&lt;/p&gt;
+&lt;p&gt;Also, many Rust/WebAssembly projects tend to handle a lot of logic on the browser side with JavaScript code, I didn&amp;rsquo;t want to do that and focused on doing as much as possible in rust.&lt;/p&gt;
+&lt;h1 id=&#34;chip8-vm&#34;&gt;chip8 vm&lt;/h1&gt;
+&lt;p&gt;So, what&amp;rsquo;s the chip8 VM?&lt;/p&gt;
+&lt;p&gt;chip8 is a VM developed by &lt;a href=&#34;https://en.wikipedia.org/wiki/Joseph_Weisbecker&#34;&gt;Joseph Weisbecker&lt;/a&gt; in the late 70&amp;rsquo;s that allowed to play 2D monochromic games on computers such as the famous &lt;a href=&#34;https://en.wikipedia.org/wiki/List_of_Space_Invaders_video_games&#34;&gt;space invaders&lt;/a&gt;, &lt;a href=&#34;https://en.wikipedia.org/wiki/Pong&#34;&gt;pong&lt;/a&gt;, or &lt;a href=&#34;https://en.wikipedia.org/wiki/Tetris&#34;&gt;tetris&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;It&amp;rsquo;s one of the simplest VMs so it&amp;rsquo;s often chosen to build a first toy emulator (yes that&amp;rsquo;s my case!).&lt;/p&gt;
+&lt;p&gt;Its screen resolution is 64x32 (only black &amp;amp; white pixels), and has a keypad made of 16 keys to handle user input.&lt;/p&gt;
+&lt;p&gt;It also has everything a stack based VM needs:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;4096 bytes of memory&lt;/li&gt;
+&lt;li&gt;16 registers&lt;/li&gt;
+&lt;li&gt;an index register&lt;/li&gt;
+&lt;li&gt;a program counter&lt;/li&gt;
+&lt;li&gt;a stack &amp;amp; a stack pointer&lt;/li&gt;
+&lt;li&gt;35 different opcodes&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;NB: An opcode is a generic name to define a set of bits that define an atomic task for a given VM.&lt;/p&gt;
+&lt;p&gt;Thus we can store these in an &lt;code&gt;Emulator&lt;/code&gt; struct.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Emulator&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;pub&lt;/span&gt; current_opcode: &lt;span style=&#34;color:#a6e22e&#34;&gt;OpCode&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    memory: [&lt;span style=&#34;color:#66d9ef&#34;&gt;u8&lt;/span&gt;; &lt;span style=&#34;color:#ae81ff&#34;&gt;4096&lt;/span&gt;],
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    registers: [&lt;span style=&#34;color:#66d9ef&#34;&gt;u8&lt;/span&gt;; &lt;span style=&#34;color:#ae81ff&#34;&gt;16&lt;/span&gt;],
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    index_register: &lt;span style=&#34;color:#66d9ef&#34;&gt;u16&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    program_counter: &lt;span style=&#34;color:#66d9ef&#34;&gt;u16&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;pub&lt;/span&gt; screen: [&lt;span style=&#34;color:#66d9ef&#34;&gt;bool&lt;/span&gt;; &lt;span style=&#34;color:#ae81ff&#34;&gt;64&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;32&lt;/span&gt;],
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;pub&lt;/span&gt; stack: [&lt;span style=&#34;color:#66d9ef&#34;&gt;u16&lt;/span&gt;; &lt;span style=&#34;color:#ae81ff&#34;&gt;16&lt;/span&gt;],
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    stack_pointer: &lt;span style=&#34;color:#66d9ef&#34;&gt;usize&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    delay_timer: &lt;span style=&#34;color:#66d9ef&#34;&gt;u8&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    sound_timer: &lt;span style=&#34;color:#66d9ef&#34;&gt;u8&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;pub&lt;/span&gt; keypad: &lt;span style=&#34;color:#a6e22e&#34;&gt;Rc&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;RefCell&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;[&lt;span style=&#34;color:#66d9ef&#34;&gt;bool&lt;/span&gt;; &lt;span style=&#34;color:#ae81ff&#34;&gt;16&lt;/span&gt;]&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&amp;gt;&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;pub&lt;/span&gt; rom_buffer: &lt;span style=&#34;color:#a6e22e&#34;&gt;Rc&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;RefCell&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;Vec&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;u8&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&amp;gt;&amp;gt;&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;pub&lt;/span&gt; running: &lt;span style=&#34;color:#a6e22e&#34;&gt;Rc&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;RefCell&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;bool&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&amp;gt;&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Each field is defined by a &lt;a href=&#34;https://doc.rust-lang.org/rust-by-example/primitives.html&#34;&gt;primitive type&lt;/a&gt;:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://doc.rust-lang.org/std/primitive.u8.html&#34;&gt;u8&lt;/a&gt; is an unsigned interger encoded on 8 bits.&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://doc.rust-lang.org/std/primitive.u16.html&#34;&gt;u16&lt;/a&gt; is an unsigned interger encoded on 16 bits.&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://doc.rust-lang.org/std/primitive.usize.html&#34;&gt;usize&lt;/a&gt; is the pointer-sized unsigned integer type.&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://doc.rust-lang.org/std/primitive.array.html&#34;&gt;[T; n]&lt;/a&gt; is an array of type T and length n.&lt;/li&gt;
+&lt;li&gt;OpCode is a struct made of 4 &lt;a href=&#34;https://doc.rust-lang.org/std/primitive.u8.html&#34;&gt;u8&lt;/a&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;OpCode&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;pub&lt;/span&gt; first_nibble: &lt;span style=&#34;color:#66d9ef&#34;&gt;u8&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;pub&lt;/span&gt; second_nibble: &lt;span style=&#34;color:#66d9ef&#34;&gt;u8&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;pub&lt;/span&gt; third_nibble: &lt;span style=&#34;color:#66d9ef&#34;&gt;u8&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;pub&lt;/span&gt; fourth_nibble: &lt;span style=&#34;color:#66d9ef&#34;&gt;u8&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://doc.rust-lang.org/book/ch15-05-interior-mutability.html&#34;&gt;Rc&amp;lt;RefCell&amp;lt;T&amp;gt;&amp;gt;&lt;/a&gt; is a way to ensure interior mutability&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Rust is a safe language and has concepts other languages do not have. The &lt;a href=&#34;https://doc.rust-lang.org/book/ch04-02-references-and-borrowing.html&#34;&gt;borrow checker&lt;/a&gt; is one of them and &lt;a href=&#34;https://doc.rust-lang.org/book/ch15-05-interior-mutability.html&#34;&gt;Rc&amp;lt;RefCell&amp;lt;T&amp;gt;&amp;gt;&lt;/a&gt; is just a way to check borrowing rules correctness at runtime instead of compile time. But that&amp;rsquo;s absolutely not the point of this blogpost.&lt;/p&gt;
+&lt;h1 id=&#34;how-it-works&#34;&gt;how it works&lt;/h1&gt;
+&lt;p&gt;When the &lt;code&gt;Emulator&lt;/code&gt; is initialized, all its fields are set to its &lt;a href=&#34;https://github.com/bernsteining/chiphuit/blob/master/src/cpu.rs#L126&#34;&gt;default values&lt;/a&gt; (basically everything is set to 0 / false).&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;impl&lt;/span&gt; Emulator {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;new&lt;/span&gt;() -&amp;gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Emulator&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        Emulator {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            current_opcode: &lt;span style=&#34;color:#a6e22e&#34;&gt;OpCode&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;                first_nibble: &lt;span style=&#34;color:#ae81ff&#34;&gt;0_&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;u8&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;                second_nibble: &lt;span style=&#34;color:#ae81ff&#34;&gt;0_&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;u8&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;                third_nibble: &lt;span style=&#34;color:#ae81ff&#34;&gt;0_&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;u8&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;                fourth_nibble: &lt;span style=&#34;color:#ae81ff&#34;&gt;0_&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;u8&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            },
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            memory: [&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;; &lt;span style=&#34;color:#ae81ff&#34;&gt;4096&lt;/span&gt;],
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            registers: [&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;; &lt;span style=&#34;color:#ae81ff&#34;&gt;16&lt;/span&gt;],
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            index_register: &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            program_counter: &lt;span style=&#34;color:#ae81ff&#34;&gt;512&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            screen: [&lt;span style=&#34;color:#66d9ef&#34;&gt;false&lt;/span&gt;; &lt;span style=&#34;color:#ae81ff&#34;&gt;64&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;32&lt;/span&gt;],
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            stack: [&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;; &lt;span style=&#34;color:#ae81ff&#34;&gt;16&lt;/span&gt;],
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            stack_pointer: &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            delay_timer: &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            sound_timer: &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            keypad: &lt;span style=&#34;color:#a6e22e&#34;&gt;Rc&lt;/span&gt;::new(RefCell::new([&lt;span style=&#34;color:#66d9ef&#34;&gt;false&lt;/span&gt;; &lt;span style=&#34;color:#ae81ff&#34;&gt;16&lt;/span&gt;])),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            running: &lt;span style=&#34;color:#a6e22e&#34;&gt;Rc&lt;/span&gt;::new(RefCell::new(&lt;span style=&#34;color:#66d9ef&#34;&gt;false&lt;/span&gt;)),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            rom_buffer: &lt;span style=&#34;color:#a6e22e&#34;&gt;Rc&lt;/span&gt;::new(RefCell::new(Vec::new())),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        }
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    }
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;The &lt;code&gt;Emulator&lt;/code&gt; then loads its fonts in memory.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;const&lt;/span&gt; FONTS: [&lt;span style=&#34;color:#66d9ef&#34;&gt;u8&lt;/span&gt;; &lt;span style=&#34;color:#ae81ff&#34;&gt;80&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; [
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#ae81ff&#34;&gt;0xF0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x90&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x90&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x90&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0xF0&lt;/span&gt;, &lt;span style=&#34;color:#75715e&#34;&gt;// 0
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;    &lt;span style=&#34;color:#ae81ff&#34;&gt;0x20&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x60&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x20&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x20&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x70&lt;/span&gt;, &lt;span style=&#34;color:#75715e&#34;&gt;// 1
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;    &lt;span style=&#34;color:#ae81ff&#34;&gt;0xF0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x10&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0xF0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x80&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0xF0&lt;/span&gt;, &lt;span style=&#34;color:#75715e&#34;&gt;// 2
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;    &lt;span style=&#34;color:#ae81ff&#34;&gt;0xF0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x10&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0xF0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x10&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0xF0&lt;/span&gt;, &lt;span style=&#34;color:#75715e&#34;&gt;// 3
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;    &lt;span style=&#34;color:#ae81ff&#34;&gt;0x90&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x90&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0xF0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x10&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x10&lt;/span&gt;, &lt;span style=&#34;color:#75715e&#34;&gt;// 4
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;    &lt;span style=&#34;color:#ae81ff&#34;&gt;0xF0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x80&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0xF0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x10&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0xF0&lt;/span&gt;, &lt;span style=&#34;color:#75715e&#34;&gt;// 5
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;    &lt;span style=&#34;color:#ae81ff&#34;&gt;0xF0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x80&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0xF0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x90&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0xF0&lt;/span&gt;, &lt;span style=&#34;color:#75715e&#34;&gt;// 6
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;    &lt;span style=&#34;color:#ae81ff&#34;&gt;0xF0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x10&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x20&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x40&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x40&lt;/span&gt;, &lt;span style=&#34;color:#75715e&#34;&gt;// 7
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;    &lt;span style=&#34;color:#ae81ff&#34;&gt;0xF0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x90&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0xF0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x90&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0xF0&lt;/span&gt;, &lt;span style=&#34;color:#75715e&#34;&gt;// 8
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;    &lt;span style=&#34;color:#ae81ff&#34;&gt;0xF0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x90&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0xF0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x10&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0xF0&lt;/span&gt;, &lt;span style=&#34;color:#75715e&#34;&gt;// 9
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;    &lt;span style=&#34;color:#ae81ff&#34;&gt;0xF0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x90&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0xF0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x90&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x90&lt;/span&gt;, &lt;span style=&#34;color:#75715e&#34;&gt;// A
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;    &lt;span style=&#34;color:#ae81ff&#34;&gt;0xE0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x90&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0xE0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x90&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0xE0&lt;/span&gt;, &lt;span style=&#34;color:#75715e&#34;&gt;// B
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;    &lt;span style=&#34;color:#ae81ff&#34;&gt;0xF0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x80&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x80&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x80&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0xF0&lt;/span&gt;, &lt;span style=&#34;color:#75715e&#34;&gt;// C
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;    &lt;span style=&#34;color:#ae81ff&#34;&gt;0xE0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x90&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x90&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x90&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0xE0&lt;/span&gt;, &lt;span style=&#34;color:#75715e&#34;&gt;// D
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;    &lt;span style=&#34;color:#ae81ff&#34;&gt;0xF0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x80&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0xF0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x80&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0xF0&lt;/span&gt;, &lt;span style=&#34;color:#75715e&#34;&gt;// E
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;    &lt;span style=&#34;color:#ae81ff&#34;&gt;0xF0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x80&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0xF0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x80&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0x80&lt;/span&gt;, &lt;span style=&#34;color:#75715e&#34;&gt;// F
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;];
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;load_font&lt;/span&gt;(&lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;mut&lt;/span&gt; self) {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        self.memory[&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;..&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;80&lt;/span&gt;].copy_from_slice(&lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;FONTS);
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    }
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;It&amp;rsquo;s just a constant &lt;a href=&#34;https://doc.rust-lang.org/std/primitive.u8.html&#34;&gt;u8&lt;/a&gt; array that encodes the &lt;code&gt;0-9A-F&lt;/code&gt; charset with the first nibble as follow:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;hexadecimal             binary             visual
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;   0xF0               &lt;span style=&#34;color:#ae81ff&#34;&gt;1111&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;0000&lt;/span&gt;             ████
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;   0x90               &lt;span style=&#34;color:#ae81ff&#34;&gt;1001&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;0000&lt;/span&gt;             █  █
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;   0x90               &lt;span style=&#34;color:#ae81ff&#34;&gt;1001&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;0000&lt;/span&gt;             █  █
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;   0x90               &lt;span style=&#34;color:#ae81ff&#34;&gt;1001&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;0000&lt;/span&gt;             █  █
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;   0xF0               &lt;span style=&#34;color:#ae81ff&#34;&gt;1111&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;0000&lt;/span&gt;             ████
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Then the user has to supply a ROM (Tetris for example) to the emulator, the &lt;code&gt;Emulator&lt;/code&gt; will then copy the ROM&amp;rsquo;s bytes into the RAM (&lt;code&gt;memory&lt;/code&gt; field of the &lt;code&gt;Emulator&lt;/code&gt; struct), starting from offset 512, according to &lt;a href=&#34;http://devernay.free.fr/hacks/chip8/C8TECH10.HTM#2.1&#34;&gt;cowgod&amp;rsquo;s chip8 technical reference&lt;/a&gt;. That&amp;rsquo;s also why the &lt;code&gt;program_counter&lt;/code&gt; is initialized with the value 512.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;load_rom&lt;/span&gt;(&lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;mut&lt;/span&gt; self) {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        &lt;span style=&#34;color:#66d9ef&#34;&gt;let&lt;/span&gt; rom_length &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; self.rom_buffer.borrow().len();
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        self.memory[&lt;span style=&#34;color:#ae81ff&#34;&gt;512&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;..&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;512&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; rom_length].copy_from_slice(&lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;self.rom_buffer.borrow());
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        self.rom_buffer.borrow_mut().clear();
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    }
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Now we&amp;rsquo;re ready to enter the event loop.&lt;/p&gt;
+&lt;p&gt;The &lt;a href=&#34;https://github.com/bernsteining/chiphuit/blob/master/src/lib.rs#L67&#34;&gt;event loop&lt;/a&gt; is basically an infinite loop that handles 3 things on each iteration:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;the instruction cycle&lt;/li&gt;
+&lt;li&gt;the screen display &amp;amp; audio&lt;/li&gt;
+&lt;li&gt;the user input&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;NB: &lt;a href=&#34;https://rustwasm.github.io/wasm-bindgen/examples/request-animation-frame.html&#34;&gt;wasm-bindgen docs&lt;/a&gt; provides a nice example of an event loop using requestAnimationFrame.&lt;/p&gt;
+&lt;p&gt;Hence, making a chip8 emulator from scratch can be splitted in these 3 parts.&lt;/p&gt;
+&lt;p&gt;However, the handling of user input &amp;amp; the way you handle screen depend on the API you&amp;rsquo;re using. A chip8 emulator can be rendered in a terminal since printing white squares is enough to emulate the screen. In our implementation we&amp;rsquo;re targeting WebAssembly so we&amp;rsquo;re going to use browsers APIs.&lt;/p&gt;
+&lt;p&gt;Although, the way you handle opcodes has to be very precise and close to the architecture documentation, in order to run any game properly.&lt;/p&gt;
+&lt;h1 id=&#34;handling-the-instruction-cycle&#34;&gt;handling the instruction cycle&lt;/h1&gt;
+&lt;p&gt;An &lt;a href=&#34;https://en.wikipedia.org/wiki/Instruction_cycle&#34;&gt;instruction cycle&lt;/a&gt; in a VM is often represented as a 3 steps process:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;fetch&lt;/li&gt;
+&lt;li&gt;decode&lt;/li&gt;
+&lt;li&gt;execute&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h1 id=&#34;fetch&#34;&gt;fetch&lt;/h1&gt;
+&lt;p&gt;Fetching the opcode is done by getting it from the &lt;code&gt;Emulator&lt;/code&gt;&amp;rsquo;s &lt;code&gt;memory&lt;/code&gt; according to its &lt;code&gt;program counter&lt;/code&gt;. A chip8 opcode is made of 4 nibbles (1 &lt;a href=&#34;https://en.wikipedia.org/wiki/Nibble&#34;&gt;nibble&lt;/a&gt; = 4 bits).&lt;/p&gt;
+&lt;p&gt;4x4 = 16, so we can store a whole opcode in a &lt;a href=&#34;https://doc.rust-lang.org/std/primitive.u16.html&#34;&gt;u16&lt;/a&gt; (16-bit unsigned integer type).&lt;/p&gt;
+&lt;p&gt;Example of an  opcode:&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;first nibble&lt;/th&gt;
+&lt;th&gt;seconde nibble&lt;/th&gt;
+&lt;th&gt;third nibble&lt;/th&gt;
+&lt;th&gt;fourth nibble&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;0001&lt;/td&gt;
+&lt;td&gt;0110&lt;/td&gt;
+&lt;td&gt;0110&lt;/td&gt;
+&lt;td&gt;0101&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;According to the documentation, the 1st and 2nd nibbles of the opcode to process lie in &lt;code&gt;memory&lt;/code&gt; at offset &lt;code&gt;program_counter&lt;/code&gt;, and the 3rd and 4th nibbles at offset &lt;code&gt;program_counter + 1&lt;/code&gt;. Since our &lt;code&gt;memory&lt;/code&gt; is a &lt;a href=&#34;https://doc.rust-lang.org/std/primitive.u8.html&#34;&gt;u8&lt;/a&gt; array, we build a &lt;a href=&#34;https://doc.rust-lang.org/std/primitive.u16.html&#34;&gt;u16&lt;/a&gt; out of two &lt;a href=&#34;https://doc.rust-lang.org/std/primitive.u8.html&#34;&gt;u8&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Then we store each nibble in a &lt;a href=&#34;https://doc.rust-lang.org/std/primitive.u8.html&#34;&gt;u8&lt;/a&gt; (8-bit unsigned integer type) since rust doesn&amp;rsquo;t have a u4 type, and wrap everything in an &lt;code&gt;OpCode&lt;/code&gt; struct so that we can access nibbles easily when processing the opcode later.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;fetch_opcode&lt;/span&gt;(&lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;mut&lt;/span&gt; self) {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        &lt;span style=&#34;color:#66d9ef&#34;&gt;let&lt;/span&gt; opcode &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; (self.memory[self.program_counter &lt;span style=&#34;color:#66d9ef&#34;&gt;as&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;usize&lt;/span&gt;] &lt;span style=&#34;color:#66d9ef&#34;&gt;as&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;u16&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;8&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            &lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt; self.memory[(self.program_counter &lt;span style=&#34;color:#66d9ef&#34;&gt;as&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;usize&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;) &lt;span style=&#34;color:#66d9ef&#34;&gt;as&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;usize&lt;/span&gt;] &lt;span style=&#34;color:#66d9ef&#34;&gt;as&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;u16&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        self.current_opcode &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; OpCode {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            first_nibble: ((opcode &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;0xF000&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;12&lt;/span&gt;) &lt;span style=&#34;color:#66d9ef&#34;&gt;as&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;u8&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            second_nibble: ((opcode &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;0x0F00&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;8&lt;/span&gt;) &lt;span style=&#34;color:#66d9ef&#34;&gt;as&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;u8&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            third_nibble: ((opcode &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;0x00F0&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;4&lt;/span&gt;) &lt;span style=&#34;color:#66d9ef&#34;&gt;as&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;u8&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            fourth_nibble: (opcode &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;0x000F&lt;/span&gt;) &lt;span style=&#34;color:#66d9ef&#34;&gt;as&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;u8&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        };
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    }
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;To do so, we used &lt;a href=&#34;https://en.wikipedia.org/wiki/Bitwise_operation&#34;&gt;bitwise operators&lt;/a&gt;:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;bit shifting ( &amp;raquo; )&lt;/li&gt;
+&lt;li&gt;boolean OR (|)&lt;/li&gt;
+&lt;li&gt;boolean AND (&amp;amp;).&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h1 id=&#34;decode&#34;&gt;decode&lt;/h1&gt;
+&lt;p&gt;Decoding is identifying the opcode, in order to know which function to execute, basically it is a big switch case between all the different types of opcodes (35 in our case).&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://en.wikipedia.org/wiki/CHIP-8#Opcode_table&#34;&gt;Wikipedia&lt;/a&gt; provides a nice description of all opcodes, so all we have to do is to reimplement their logic.&lt;/p&gt;
+&lt;p&gt;Match arms are pretty handy to pattern match opcodes and should be the way to go when handling opcodes of a VM, whatever the VM in my opinion.&lt;/p&gt;
+&lt;p&gt;Yes, coding an emulator is basically implementing each handle function for each opcode by reading its documentation, but in the end you&amp;rsquo;ll be able to play tetris.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;process_opcode&lt;/span&gt;(&lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;mut&lt;/span&gt; self) {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        self.program_counter &lt;span style=&#34;color:#f92672&#34;&gt;+=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;2&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        &lt;span style=&#34;color:#66d9ef&#34;&gt;match&lt;/span&gt; (
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            self.current_opcode.first_nibble,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            self.current_opcode.second_nibble,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            self.current_opcode.third_nibble,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            self.current_opcode.fourth_nibble,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        ) {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            (&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0xE&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0xE&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; self._00ee(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            (&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0xE&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; self._00e0(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            (&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;, _, _, _) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; self._0nnn(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            (&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;, _, _, _) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; self._1nnn(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            (&lt;span style=&#34;color:#ae81ff&#34;&gt;2&lt;/span&gt;, _, _, _) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; self._2nnn(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            (&lt;span style=&#34;color:#ae81ff&#34;&gt;3&lt;/span&gt;, _, _, _) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; self._3xnn(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            (&lt;span style=&#34;color:#ae81ff&#34;&gt;4&lt;/span&gt;, _, _, _) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; self._4xnn(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            (&lt;span style=&#34;color:#ae81ff&#34;&gt;5&lt;/span&gt;, _, _, &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; self._5xy0(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            (&lt;span style=&#34;color:#ae81ff&#34;&gt;6&lt;/span&gt;, _, _, _) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; self._6xnn(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            (&lt;span style=&#34;color:#ae81ff&#34;&gt;7&lt;/span&gt;, _, _, _) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; self._7xnn(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            (&lt;span style=&#34;color:#ae81ff&#34;&gt;8&lt;/span&gt;, _, _, &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; self._8xy0(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            (&lt;span style=&#34;color:#ae81ff&#34;&gt;8&lt;/span&gt;, _, _, &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; self._8xy1(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            (&lt;span style=&#34;color:#ae81ff&#34;&gt;8&lt;/span&gt;, _, _, &lt;span style=&#34;color:#ae81ff&#34;&gt;2&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; self._8xy2(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            (&lt;span style=&#34;color:#ae81ff&#34;&gt;8&lt;/span&gt;, _, _, &lt;span style=&#34;color:#ae81ff&#34;&gt;3&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; self._8xy3(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            (&lt;span style=&#34;color:#ae81ff&#34;&gt;8&lt;/span&gt;, _, _, &lt;span style=&#34;color:#ae81ff&#34;&gt;4&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; self._8xy4(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            (&lt;span style=&#34;color:#ae81ff&#34;&gt;8&lt;/span&gt;, _, _, &lt;span style=&#34;color:#ae81ff&#34;&gt;5&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; self._8xy5(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            (&lt;span style=&#34;color:#ae81ff&#34;&gt;8&lt;/span&gt;, _, _, &lt;span style=&#34;color:#ae81ff&#34;&gt;6&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; self._8xy6(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            (&lt;span style=&#34;color:#ae81ff&#34;&gt;8&lt;/span&gt;, _, _, &lt;span style=&#34;color:#ae81ff&#34;&gt;7&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; self._8xy7(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            (&lt;span style=&#34;color:#ae81ff&#34;&gt;8&lt;/span&gt;, _, _, &lt;span style=&#34;color:#ae81ff&#34;&gt;0xE&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; self._8xye(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            (&lt;span style=&#34;color:#ae81ff&#34;&gt;9&lt;/span&gt;, _, _, &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; self._9xy0(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            (&lt;span style=&#34;color:#ae81ff&#34;&gt;0xA&lt;/span&gt;, _, _, _) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; self.annn(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            (&lt;span style=&#34;color:#ae81ff&#34;&gt;0xB&lt;/span&gt;, _, _, _) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; self.bnnn(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            (&lt;span style=&#34;color:#ae81ff&#34;&gt;0xC&lt;/span&gt;, _, _, _) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; self.cxnn(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            (&lt;span style=&#34;color:#ae81ff&#34;&gt;0xD&lt;/span&gt;, _, _, _) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; self.dxyn(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            (&lt;span style=&#34;color:#ae81ff&#34;&gt;0xE&lt;/span&gt;, _, &lt;span style=&#34;color:#ae81ff&#34;&gt;9&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0xE&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; self.ex9e(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            (&lt;span style=&#34;color:#ae81ff&#34;&gt;0xE&lt;/span&gt;, _, &lt;span style=&#34;color:#ae81ff&#34;&gt;0xA&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; self.exa1(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            (&lt;span style=&#34;color:#ae81ff&#34;&gt;0xF&lt;/span&gt;, _, &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;7&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; self.fx07(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            (&lt;span style=&#34;color:#ae81ff&#34;&gt;0xF&lt;/span&gt;, _, &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0xA&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; self.fx0a(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            (&lt;span style=&#34;color:#ae81ff&#34;&gt;0xF&lt;/span&gt;, _, &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;5&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; self.fx15(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            (&lt;span style=&#34;color:#ae81ff&#34;&gt;0xF&lt;/span&gt;, _, &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;8&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; self.fx18(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            (&lt;span style=&#34;color:#ae81ff&#34;&gt;0xF&lt;/span&gt;, _, &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0xE&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; self.fx1e(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            (&lt;span style=&#34;color:#ae81ff&#34;&gt;0xF&lt;/span&gt;, _, &lt;span style=&#34;color:#ae81ff&#34;&gt;2&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;9&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; self.fx29(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            (&lt;span style=&#34;color:#ae81ff&#34;&gt;0xF&lt;/span&gt;, _, &lt;span style=&#34;color:#ae81ff&#34;&gt;3&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;3&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; self.fx33(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            (&lt;span style=&#34;color:#ae81ff&#34;&gt;0xF&lt;/span&gt;, _, &lt;span style=&#34;color:#ae81ff&#34;&gt;5&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;5&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; self.fx55(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            (&lt;span style=&#34;color:#ae81ff&#34;&gt;0xF&lt;/span&gt;, _, &lt;span style=&#34;color:#ae81ff&#34;&gt;6&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;5&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; self.fx65(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            _ &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;                console::log_1(
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;                    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;format!(
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;                        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Unknown opcode: {:X}{:X}{:X}{:X}&amp;#34;&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;                        self.current_opcode.first_nibble,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;                        self.current_opcode.second_nibble,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;                        self.current_opcode.third_nibble,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;                        self.current_opcode.fourth_nibble
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;                    )
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;                    .into(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;                );
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            }
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        }
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    }
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;As an example we are going to decode by hand an opcode.&lt;/p&gt;
+&lt;p&gt;Let&amp;rsquo;s consider the following &lt;a href=&#34;%5Bu16%5D(https://doc.rust-lang.org/std/primitive.u16.html)&#34;&gt;u16&lt;/a&gt; : 1000011001010111&lt;/p&gt;
+&lt;p&gt;Let&amp;rsquo;s split it into 4 nibbles as follow:&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;first nibble&lt;/th&gt;
+&lt;th&gt;seconde nibble&lt;/th&gt;
+&lt;th&gt;third nibble&lt;/th&gt;
+&lt;th&gt;fourth nibble&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;1000&lt;/td&gt;
+&lt;td&gt;0110&lt;/td&gt;
+&lt;td&gt;0101&lt;/td&gt;
+&lt;td&gt;0111&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;ul&gt;
+&lt;li&gt;The 1st nibble is 1000 which is 8 in binary.&lt;/li&gt;
+&lt;li&gt;The 4th nibble is 0101 which is 7 in binary.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Hence it is the 8XY7 opcode, and the 2nd (X) and 3rd nibbles (Y) are going to be processed to modify our emulator state during the execution of the 8XY7 function handler.&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;first nibble&lt;/th&gt;
+&lt;th&gt;seconde nibble&lt;/th&gt;
+&lt;th&gt;third nibble&lt;/th&gt;
+&lt;th&gt;fourth nibble&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;1000 = 8&lt;/td&gt;
+&lt;td&gt;0110 = X&lt;/td&gt;
+&lt;td&gt;0101 = Y&lt;/td&gt;
+&lt;td&gt;0111 = 7&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h1 id=&#34;execute&#34;&gt;execute&lt;/h1&gt;
+&lt;p&gt;Executing is calling the opcode handle function, it&amp;rsquo;s the right hand side of the match arm.&lt;/p&gt;
+&lt;p&gt;For example, here&amp;rsquo;s the function handle for the 8XY7 opcode we just decoded:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#e6db74&#34;&gt;/// Sets VX to VY minus VX. VF is set to 0 when there&amp;#39;s a borrow,
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&lt;/span&gt;    &lt;span style=&#34;color:#e6db74&#34;&gt;/// and 1 when there is not.
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&lt;/span&gt;    &lt;span style=&#34;color:#e6db74&#34;&gt;/// vx = vy - vx
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&lt;/span&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;_8xy7&lt;/span&gt;(&lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;mut&lt;/span&gt; self) {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        &lt;span style=&#34;color:#66d9ef&#34;&gt;let&lt;/span&gt; substraction &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; (self.get_vy() &lt;span style=&#34;color:#f92672&#34;&gt;-&lt;/span&gt; self.get_vx()) &lt;span style=&#34;color:#66d9ef&#34;&gt;as&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;i8&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        self.registers[&lt;span style=&#34;color:#ae81ff&#34;&gt;15&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; self.carry(substraction);
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        self.registers[self.current_opcode.second_nibble &lt;span style=&#34;color:#66d9ef&#34;&gt;as&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;usize&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; substraction &lt;span style=&#34;color:#66d9ef&#34;&gt;as&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;u8&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    }
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Another example with the function handle for the 8XY6 opcode:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;/// Stores the least significant bit of VX in VF and then shifts
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;/// VX to the right by 1.
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;/// vx &amp;gt;&amp;gt;= 1
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;_8xy6&lt;/span&gt;(&lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;mut&lt;/span&gt; self) {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    self.registers[&lt;span style=&#34;color:#ae81ff&#34;&gt;15&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;u8&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt; self.get_vx();
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    self.registers[self.current_opcode.second_nibble &lt;span style=&#34;color:#66d9ef&#34;&gt;as&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;usize&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&amp;gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;You&amp;rsquo;ll notice the presence of &lt;a href=&#34;https://github.com/bernsteining/chiphuit/blob/master/src/cpu.rs#L242&#34;&gt;get_vy()&lt;/a&gt;, &lt;a href=&#34;https://github.com/bernsteining/chiphuit/blob/master/src/cpu.rs#L236&#34;&gt;get_vx()&lt;/a&gt; and the &lt;a href=&#34;https://github.com/bernsteining/chiphuit/blob/master/src/cpu.rs#L235&#34;&gt;carry&lt;/a&gt; functions.&lt;/p&gt;
+&lt;p&gt;All the opcodes share common patterns so it&amp;rsquo;s a good idea to factorize common patterns in separate functions in order to reuse code, the code usually looks cleaner this way.&lt;/p&gt;
+&lt;p&gt;NB: A very handy way to ensure all opcodes&amp;rsquo; implementation correctness is by loading &lt;a href=&#34;https://github.com/corax89/chip8-test-rom&#34;&gt;this ROM&lt;/a&gt; in your emulator. You&amp;rsquo;ll be able to see which opcode handle function is incorrect. Helped me a lot when I didn&amp;rsquo;t have my debugger yet.&lt;/p&gt;
+&lt;h2 id=&#34;handling-the-screen-display&#34;&gt;handling the screen display&lt;/h2&gt;
+&lt;p&gt;In order to display the screen of our &lt;code&gt;Emulator&lt;/code&gt; we have 2 Web APIs for this:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API&#34;&gt;WebGL&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API&#34;&gt;Canvas&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;WebGL kinda brings OpenGL into the browser which can be very useful when rendering complex geometry and shaders, whereas Canvas offers a 2D rectangular space to draw in a simple manner.&lt;/p&gt;
+&lt;p&gt;Since chip8 doesn&amp;rsquo;t involve 3D geometry nor shaders, but only 32x64 black &amp;amp; white pixels, using Canvas API is much more appropriate IMO for our use case :).&lt;/p&gt;
+&lt;p&gt;A great example of the Canvas API is provided by the &lt;a href=&#34;https://rustwasm.github.io/wasm-bindgen/examples/julia.html&#34;&gt;wasm-bindgen&lt;/a&gt; repo, where a &lt;a href=&#34;https://en.wikipedia.org/wiki/Julia_set&#34;&gt;julia set&lt;/a&gt; is rendered.&lt;/p&gt;
+&lt;p&gt;Therefore, in our event loop we&amp;rsquo;re going to update the Canvas from our &lt;code&gt;Emulator&lt;/code&gt;&amp;rsquo;s &lt;code&gt;screen&lt;/code&gt; field. To do so, we iterate over our &lt;code&gt;screen&lt;/code&gt; array and convert each boolean into a &lt;a href=&#34;https://en.wikipedia.org/wiki/RGBA_color_model&#34;&gt;RGBA&lt;/a&gt; pixel in order to build an &lt;a href=&#34;https://developer.mozilla.org/en-US/docs/Web/API/ImageData&#34;&gt;ImageData&lt;/a&gt; that our Canvas will display in the Browser.&lt;/p&gt;
+&lt;p&gt;If we implemented the opcodes logic correctly, our &lt;code&gt;Emulator&lt;/code&gt;&amp;rsquo;s &lt;code&gt;screen&lt;/code&gt; should contain &lt;code&gt;false&lt;/code&gt; for every pixel turned off, and &lt;code&gt;true&lt;/code&gt; for every pixel turned on. In &lt;a href=&#34;https://en.wikipedia.org/wiki/RGBA_color_model&#34;&gt;RGBA&lt;/a&gt; &lt;code&gt;[0, 0, 0, 0]&lt;/code&gt; represents and black pixel and &lt;code&gt;[255, 255, 255, 255]&lt;/code&gt; a white pixel.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;draw_screen&lt;/span&gt;(context: &lt;span style=&#34;color:#66d9ef&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;CanvasRenderingContext2d&lt;/span&gt;, screen: [&lt;span style=&#34;color:#66d9ef&#34;&gt;bool&lt;/span&gt;; &lt;span style=&#34;color:#ae81ff&#34;&gt;64&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;32&lt;/span&gt;]) {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;let&lt;/span&gt; rgba_screen: Vec&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;u8&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; screen
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        .iter()
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        .flat_map(&lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt;x&lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;match&lt;/span&gt; x {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            &lt;span style=&#34;color:#66d9ef&#34;&gt;false&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; [&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;u8&lt;/span&gt;; &lt;span style=&#34;color:#ae81ff&#34;&gt;4&lt;/span&gt;],
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            &lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; [&lt;span style=&#34;color:#ae81ff&#34;&gt;255&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;u8&lt;/span&gt;; &lt;span style=&#34;color:#ae81ff&#34;&gt;4&lt;/span&gt;],
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        })
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        .collect();
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;let&lt;/span&gt; frame &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        ImageData::new_with_u8_clamped_array_and_sh(Clamped(&lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;rgba_screen), WIDTH, HEIGHT).unwrap();
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    context.put_image_data(&lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;frame, &lt;span style=&#34;color:#ae81ff&#34;&gt;0.0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0.0&lt;/span&gt;).unwrap();
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;[0u8; 4]&lt;/code&gt; is just a handy way to create an u8 array of length 4 filled with zeros so is &lt;code&gt;[255u8; 4]&lt;/code&gt; for an u8 array filled with 255s.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;flat_map&lt;/code&gt; is just a way to iterate over &lt;code&gt;screen&lt;/code&gt; and to avoid nesting arrays in &lt;code&gt;rgba_screen&lt;/code&gt;.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Then all we will have to do is call &lt;code&gt;draw_screen&lt;/code&gt; in our event loop to refresh the emulator&amp;rsquo;s screen in our Browser&amp;rsquo;s Canvas.&lt;/p&gt;
+&lt;p&gt;There&amp;rsquo;s only 1 opcode that handles the drawing of the sprites on a chip8 emulator screen, it&amp;rsquo;s the &lt;code&gt;DXYN&lt;/code&gt;. It does so by &lt;a href=&#34;https://en.wikipedia.org/wiki/Exclusive_or&#34;&gt;XOR&lt;/a&gt;ing rectangle areas with the previous frame, you can see its implementation &lt;a href=&#34;https://github.com/bernsteining/chiphuit/blob/master/src/cpu.rs#L436&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
+&lt;h2 id=&#34;handling-audio&#34;&gt;handling audio&lt;/h2&gt;
+&lt;p&gt;The &lt;code&gt;Emulator&lt;/code&gt; struct has a &lt;a href=&#34;https://doc.rust-lang.org/std/primitive.u8.html&#34;&gt;u8&lt;/a&gt; &lt;code&gt;sound_timer&lt;/code&gt;. We should hear a &amp;lsquo;beep&amp;rsquo; noise if &lt;code&gt;sound_timer&lt;/code&gt; has a positive value and decrement it, so the code is pretty straightforward:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sound&lt;/span&gt;(emulator: &lt;span style=&#34;color:#66d9ef&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;mut&lt;/span&gt; cpu::Emulator, audio_context: &lt;span style=&#34;color:#66d9ef&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;FmOsc&lt;/span&gt;) {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;match&lt;/span&gt; emulator.sound_timer {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; audio_context.gain.gain().set_value(&lt;span style=&#34;color:#ae81ff&#34;&gt;0.0&lt;/span&gt;),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        _ &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            audio_context.gain.gain().set_value(&lt;span style=&#34;color:#ae81ff&#34;&gt;0.04&lt;/span&gt;);
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            emulator.sound_timer &lt;span style=&#34;color:#f92672&#34;&gt;-=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        }
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    }
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Once again, &lt;a href=&#34;https://rustwasm.github.io/wasm-bindgen/examples/web-audio.html&#34;&gt;wasm-bindgen&lt;/a&gt; provides an example of how to use the &lt;a href=&#34;https://developer.mozilla.org/en-US/docs/Web/API/AudioContext&#34;&gt;AudioContext API&lt;/a&gt;.&lt;/p&gt;
+&lt;h2 id=&#34;handling-user-input&#34;&gt;handling user input&lt;/h2&gt;
+&lt;p&gt;We want buttons that from the browser&amp;rsquo;s &lt;a href=&#34;https://en.wikipedia.org/wiki/Document_Object_Model&#34;&gt;DOM&lt;/a&gt; would change our &lt;code&gt;Emulator&lt;/code&gt;&amp;rsquo;s &lt;code&gt;keypad&lt;/code&gt; field values, but we also want it to work on ALL devices that can run a browser, touchscreens included.&lt;/p&gt;
+&lt;p&gt;Therefore, we want the user to be able to do a keypress by:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;clicking with a mouse on the button&lt;/li&gt;
+&lt;li&gt;pressing the key on his physical keyboard&lt;/li&gt;
+&lt;li&gt;touching a key on the virtual keyboard on a touchscreen device&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;First of all, we have to initialize our keypad in the GUI, then we will add callbacks to them so they can affect our &lt;code&gt;Emulator&lt;/code&gt; struct.&lt;/p&gt;
+&lt;p&gt;Initializing the keypad is basically just creating a &amp;lsquo;keypad&amp;rsquo; HTML element, setting its id and class name, and filling it with its 16 keys (1234QWERASDFZXCV). In their initialization loop, we hook them with the callbacks we&amp;rsquo;re going to define.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;set_keypad&lt;/span&gt;(emulator_keypad: &lt;span style=&#34;color:#66d9ef&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;Rc&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;RefCell&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;[&lt;span style=&#34;color:#66d9ef&#34;&gt;bool&lt;/span&gt;; &lt;span style=&#34;color:#ae81ff&#34;&gt;16&lt;/span&gt;]&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&amp;gt;&lt;/span&gt;) {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;let&lt;/span&gt; keypad &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; document()
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        .create_element(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;keypad&amp;#34;&lt;/span&gt;)
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        .expect(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;should have a keypad.&amp;#34;&lt;/span&gt;);
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    keypad.set_id(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;keypad&amp;#34;&lt;/span&gt;);
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    keypad.set_class_name(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;keypad-base&amp;#34;&lt;/span&gt;);
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    append_to_body(&lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;keypad);
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; (index, &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;key) &lt;span style=&#34;color:#66d9ef&#34;&gt;in&lt;/span&gt; [
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;1&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;2&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;3&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;4&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Q&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;W&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;E&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;R&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;A&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;S&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;D&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;F&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Z&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;X&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;C&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;V&amp;#34;&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    ]
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    .iter()
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    .enumerate()
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        &lt;span style=&#34;color:#66d9ef&#34;&gt;let&lt;/span&gt; keypad_key &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; document().create_element(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;div&amp;#34;&lt;/span&gt;).unwrap();
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        keypad_key.set_id(key);
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        keypad_key.set_inner_html(key);
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        keypad_key.set_class_name(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;key&amp;#34;&lt;/span&gt;);
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        keypad
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            .append_child(&lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;Node::from(keypad_key.clone()))
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            .unwrap();
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        &lt;span style=&#34;color:#75715e&#34;&gt;// Handle clicks on virtual keypad
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;        set_callback_to_button(&lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt;, &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;keypad_key, emulator_keypad, index);
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        set_callback_to_button(&lt;span style=&#34;color:#66d9ef&#34;&gt;false&lt;/span&gt;, &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;keypad_key, emulator_keypad, index);
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        &lt;span style=&#34;color:#75715e&#34;&gt;// Handle keyboard events
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;        set_callback_to_key(&lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt;, key.to_string(), emulator_keypad, index);
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        set_callback_to_key(&lt;span style=&#34;color:#66d9ef&#34;&gt;false&lt;/span&gt;, key.to_string(), emulator_keypad, index);
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    }
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;To define a callback upon a specific event, we have to use &lt;a href=&#34;https://rustwasm.github.io/wasm-bindgen/examples/closures.html&#34;&gt;event handlers&lt;/a&gt;. This can be done using rust closures, and once again &lt;a href=&#34;https://rustwasm.github.io/wasm-bindgen/examples/closures.html&#34;&gt;wasm-bindgen&lt;/a&gt; provides a nice example of how to do so.&lt;/p&gt;
+&lt;p&gt;Therefore, to fulfill our needs, we define two functions:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/bernsteining/chiphuit/blob/master/src/utils.rs#L118&#34;&gt;&lt;code&gt;set_callback_to_key&lt;/code&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/bernsteining/chiphuit/blob/master/src/utils.rs#L77&#34;&gt;&lt;code&gt;set_callback_to_button&lt;/code&gt;&lt;/a&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;a href=&#34;https://github.com/bernsteining/chiphuit/blob/master/src/utils.rs#L118&#34;&gt;&lt;code&gt;set_callback_to_key&lt;/code&gt;&lt;/a&gt; adds an event listener to handle keyboard event with the &lt;a href=&#34;https://developer.mozilla.org/en-US/docs/Web/API/Document/keyup_event&#34;&gt;keyup&lt;/a&gt; and &lt;a href=&#34;https://developer.mozilla.org/en-US/docs/Web/API/Document/keydown_event&#34;&gt;keydown&lt;/a&gt; events. These allow the user to play on the emulator using his physical keyboard.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;set_callback_to_key&lt;/span&gt;(
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    press: &lt;span style=&#34;color:#66d9ef&#34;&gt;bool&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    key: String,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    keypad: &lt;span style=&#34;color:#66d9ef&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;Rc&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;RefCell&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;[&lt;span style=&#34;color:#66d9ef&#34;&gt;bool&lt;/span&gt;; &lt;span style=&#34;color:#ae81ff&#34;&gt;16&lt;/span&gt;]&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&amp;gt;&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    index: &lt;span style=&#34;color:#66d9ef&#34;&gt;usize&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;) {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;let&lt;/span&gt; keypad_clone &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; Rc::clone(&lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;keypad);
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;let&lt;/span&gt; callback &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; Closure::wrap(Box::new(&lt;span style=&#34;color:#66d9ef&#34;&gt;move&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt;_event: &lt;span style=&#34;color:#a6e22e&#34;&gt;web_sys&lt;/span&gt;::KeyboardEvent&lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; _event.key().to_uppercase() &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; key {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            keypad_clone.borrow_mut()[index] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; press;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        }
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    }) &lt;span style=&#34;color:#66d9ef&#34;&gt;as&lt;/span&gt; Box&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;dyn&lt;/span&gt; FnMut(_)&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt;);
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    web_sys::window()
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        .unwrap()
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        .add_event_listener_with_callback(
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            &lt;span style=&#34;color:#66d9ef&#34;&gt;match&lt;/span&gt; press {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;                &lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;keydown&amp;#34;&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;                &lt;span style=&#34;color:#66d9ef&#34;&gt;false&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;keyup&amp;#34;&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            },
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            callback.as_ref().unchecked_ref(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        )
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        .unwrap();
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    callback.forget();
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;a href=&#34;https://github.com/bernsteining/chiphuit/blob/master/src/utils.rs#L77&#34;&gt;&lt;code&gt;set_callback_to_button&lt;/code&gt;&lt;/a&gt; adds 2 event listeners so the user can play with the virtual keypad in the GUI:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://developer.mozilla.org/en-US/docs/Web/API/Element/mouseup_event&#34;&gt;mouseup&lt;/a&gt; &amp;amp; &lt;a href=&#34;https://developer.mozilla.org/en-US/docs/Web/API/Element/mousedown_event&#34;&gt;mousedown&lt;/a&gt; to allow the user to play by clicking the virtual keypad with a mouse.&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://developer.mozilla.org/en-US/docs/Web/API/Element/touchstart_event&#34;&gt;touchstart&lt;/a&gt; &amp;amp; &lt;a href=&#34;https://developer.mozilla.org/en-US/docs/Web/API/Element/touchend_event&#34;&gt;touchend&lt;/a&gt; to allow the user to play on a touchscreen.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;set_callback_to_button&lt;/span&gt;(
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    press: &lt;span style=&#34;color:#66d9ef&#34;&gt;bool&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    button: &lt;span style=&#34;color:#66d9ef&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;Element&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    keypad: &lt;span style=&#34;color:#66d9ef&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;Rc&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;RefCell&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;[&lt;span style=&#34;color:#66d9ef&#34;&gt;bool&lt;/span&gt;; &lt;span style=&#34;color:#ae81ff&#34;&gt;16&lt;/span&gt;]&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&amp;gt;&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    index: &lt;span style=&#34;color:#66d9ef&#34;&gt;usize&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;) {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;let&lt;/span&gt; keypad_clone &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; Rc::clone(&lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;keypad);
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;let&lt;/span&gt; mouse_callback &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; Closure::wrap(Box::new(&lt;span style=&#34;color:#66d9ef&#34;&gt;move&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt;_event: &lt;span style=&#34;color:#a6e22e&#34;&gt;web_sys&lt;/span&gt;::MouseEvent&lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        keypad_clone.borrow_mut()[index] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; press;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    }) &lt;span style=&#34;color:#66d9ef&#34;&gt;as&lt;/span&gt; Box&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;dyn&lt;/span&gt; FnMut(_)&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt;);
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    button
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        .add_event_listener_with_callback(
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            &lt;span style=&#34;color:#66d9ef&#34;&gt;match&lt;/span&gt; press {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;                &lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;mousedown&amp;#34;&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;                &lt;span style=&#34;color:#66d9ef&#34;&gt;false&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;mouseup&amp;#34;&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            },
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            mouse_callback.as_ref().unchecked_ref(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        )
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        .unwrap();
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    mouse_callback.forget();
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;let&lt;/span&gt; keypad_clone &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; Rc::clone(&lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;keypad);
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;let&lt;/span&gt; touch_callback &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; Closure::wrap(Box::new(&lt;span style=&#34;color:#66d9ef&#34;&gt;move&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt;_event: &lt;span style=&#34;color:#a6e22e&#34;&gt;web_sys&lt;/span&gt;::TouchEvent&lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        keypad_clone.borrow_mut()[index] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; press;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    }) &lt;span style=&#34;color:#66d9ef&#34;&gt;as&lt;/span&gt; Box&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;dyn&lt;/span&gt; FnMut(_)&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt;);
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    button
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        .add_event_listener_with_callback(
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            &lt;span style=&#34;color:#66d9ef&#34;&gt;match&lt;/span&gt; press {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;                &lt;span style=&#34;color:#66d9ef&#34;&gt;true&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;touchstart&amp;#34;&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;                &lt;span style=&#34;color:#66d9ef&#34;&gt;false&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;touchend&amp;#34;&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            },
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            touch_callback.as_ref().unchecked_ref(),
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        )
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        .unwrap();
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    touch_callback.forget();
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;SPOILER ALERT: user input isn&amp;rsquo;t just about key presses :)&lt;/p&gt;
+&lt;p&gt;Indeed, as we said before, the user has to provide the emulator a ROM to run.&lt;/p&gt;
+&lt;p&gt;Handling user file input in rust was kind of a pain in the neck since there was no example of it in the wasm-bindgen documentation, and people on stackoverflow were wondering how to achieve it.&lt;/p&gt;
+&lt;p&gt;Eventually I found a way to do it with a mix of &lt;a href=&#34;https://docs.rs/js-sys/latest/js_sys/&#34;&gt;js-sys&lt;/a&gt; &amp;amp; &lt;a href=&#34;https://docs.rs/web-sys/latest/web_sys/index.html&#34;&gt;web-sys&lt;/a&gt; by using the &lt;a href=&#34;https://developer.mozilla.org/en-US/docs/Web/API/FileReader&#34;&gt;FileReader API&lt;/a&gt;, this was a great opportunity to &lt;a href=&#34;https://stackoverflow.com/a/70732758/12868222&#34;&gt;contribute&lt;/a&gt; to stackoverflow for the first time.&lt;/p&gt;
+&lt;h2 id=&#34;a-bit-of-gui-graphical-user-interface&#34;&gt;a bit of GUI (Graphical User Interface)&lt;/h2&gt;
+&lt;p&gt;Since we&amp;rsquo;re in a browser, we can style up the emulator buttons with CSS.&lt;/p&gt;
+&lt;p&gt;Basically, it displays the keypad in a grid, sets some hovering effects on buttons, and allows 2 orientation modes (landscape &amp;amp; portrait).&lt;/p&gt;
+&lt;h1 id=&#34;writing-a-debugger&#34;&gt;writing a debugger&lt;/h1&gt;
+&lt;p&gt;A &lt;a href=&#34;https://en.wikipedia.org/wiki/Debugger&#34;&gt;debugger&lt;/a&gt; is a computer program used to view, analyze, instrument &amp;amp; edit other programs, in our case: the chip8 emulator. The goal is to allow the edition of the emulator at runtime from the browser, to offer a complete control of the &lt;code&gt;Emulator&lt;/code&gt;&amp;rsquo;s struct fields, RAM included (&lt;code&gt;memory&lt;/code&gt; field).&lt;/p&gt;
+&lt;p&gt;Hence, the debugger should be able to do a few things with our &lt;code&gt;Emulator&lt;/code&gt; struct:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;offer a view of its field values&lt;/li&gt;
+&lt;li&gt;modify its fields values&lt;/li&gt;
+&lt;li&gt;make a snapshot of it&lt;/li&gt;
+&lt;li&gt;trace its execution at each CPU cycle&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Thanks to &lt;a href=&#34;https://serde.rs/&#34;&gt;serde&lt;/a&gt;, &lt;a href=&#34;https://en.wikipedia.org/wiki/Serialization&#34;&gt;serialization&lt;/a&gt; allows to load and export our &lt;code&gt;Emulator&lt;/code&gt; in JSON by just prepending our &lt;code&gt;Emulator&lt;/code&gt; struct as follow:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;#[derive(Serialize, Deserialize)]&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Emulator&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    current_opcode: &lt;span style=&#34;color:#a6e22e&#34;&gt;OpCode&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#e6db74&#34;&gt;/// [...]
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&lt;/span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;This way we can build a debugger:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;the &lt;code&gt;Serialize&lt;/code&gt; trait on our &lt;code&gt;Emulator&lt;/code&gt; struct allows us to export it in json&lt;/li&gt;
+&lt;li&gt;the &lt;code&gt;Deserialize&lt;/code&gt; trait allows to spawn a new &lt;code&gt;Emulator&lt;/code&gt; instance from a json.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;So if you want to change the &lt;code&gt;Emulator&lt;/code&gt;&amp;rsquo;s fields values, pause the emulator, copy the snapshot in JSON format to your clipboard (copy button), edit the JSON values, and load your modified JSON (load button).&lt;/p&gt;
+&lt;p&gt;If you&amp;rsquo;re curious enough you can check the code of &lt;a href=&#34;https://github.com/bernsteining/chiphuit/blob/master/src/debugger.rs&#34;&gt;debugger.rs&lt;/a&gt;, or try to load a &lt;a href=&#34;https://raw.githubusercontent.com/bernsteining/chiphuit/master/assets/tetris_snapshot.json&#34;&gt;Tetris snapshot&lt;/a&gt; I made in the emulator.&lt;/p&gt;
+&lt;h1 id=&#34;compiling--serving-the-emulator&#34;&gt;compiling &amp;amp; serving the emulator&lt;/h1&gt;
+&lt;p&gt;Compiling is a 2 steps procedure. First, we build the project using &lt;code&gt;cargo&lt;/code&gt;:&lt;/p&gt;
+&lt;pre tabindex=&#34;0&#34;&gt;&lt;code&gt;cargo build --release
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Then, we have to use &lt;a href=&#34;https://github.com/rustwasm/wasm-bindgen&#34;&gt;wasm-bindgen&lt;/a&gt;:&lt;/p&gt;
+&lt;pre tabindex=&#34;0&#34;&gt;&lt;code&gt;wasm-bindgen ./target/wasm32-unknown-unknown/release/chiphuit.wasm \
+--out-dir build --no-typescript --target no-modules \
+--remove-name-section --remove-producers-section \
+--omit-default-module-path --omit-imports
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;The compilation emits 2 build files in our build directory:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;chiphuit_bg.wasm&lt;/code&gt;, our emulator.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;chiphuit.js&lt;/code&gt;, JavaScript glue code necessary to load our WebAssembly bytecode.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;In our build directory lies an HTML file and a CSS file, both necessary to load our program and display the GUI made with CSS in a browser:&lt;/p&gt;
+&lt;pre tabindex=&#34;0&#34;&gt;&lt;code&gt;build/
+├── chiphuit_bg.wasm
+├── chiphuit.css
+├── chiphuit.js
+├── index.html
+└── favicon.ico
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Finally, serve this directory to play the emulator in your favorite browser.&lt;/p&gt;
+&lt;h1 id=&#34;troubleshooting&#34;&gt;troubleshooting&lt;/h1&gt;
+&lt;p&gt;One of my first mistakes was to render the screen of the &lt;code&gt;Emulator&lt;/code&gt; for each CPU cycle. This caused the emulator to be very slow since refreshing the screen has a cost and that chip8 CPU cycles by definition happen a lot per second.&lt;/p&gt;
+&lt;p&gt;Hence, I refreshed the screen every 10 CPU cycles and the emulator ran as expected.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;[&lt;span style=&#34;color:#f92672&#34;&gt;..&lt;/span&gt;.] main function
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;emulator.running.borrow() {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            &lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; _ &lt;span style=&#34;color:#66d9ef&#34;&gt;in&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;..&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;10&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;                emulator.cycle();
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            }
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            emulator.update_emulator_state(&lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;debugger.element.rows());
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;            graphics::draw_screen(&lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;canvas, emulator.screen);
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        }
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;[&lt;span style=&#34;color:#f92672&#34;&gt;..&lt;/span&gt;.]
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Also, the emulator wouldn&amp;rsquo;t respond as expected on touchscreen, it would:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;select the text in the keypad&lt;/li&gt;
+&lt;li&gt;zoom on double-clicks&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;This can be mitigated on the CSS side by adding a &lt;a href=&#34;https://developer.mozilla.org/en-US/docs/Web/CSS/touch-action&#34;&gt;touch-action&lt;/a&gt; property to the body.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-css&#34; data-lang=&#34;css&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;body&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  &lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;[...]&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  touch-action: &lt;span style=&#34;color:#66d9ef&#34;&gt;none&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  &lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;[...]&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h1 id=&#34;result&#34;&gt;result&lt;/h1&gt;
+&lt;p&gt;An instance of the emulator is hosted &lt;a href=&#34;https://chiphuit.glitch.me/&#34;&gt;here&lt;/a&gt;, you can supply the emulator ROMs from &lt;a href=&#34;https://github.com/kripod/chip8-roms/tree/master/games&#34;&gt;here&lt;/a&gt; to play several games.&lt;/p&gt;
+&lt;p&gt;If you&amp;rsquo;re too lazy to click and download a ROM, here&amp;rsquo;s a video of the emulator running on an iPhone (more precisely it runs in Safari&amp;rsquo;s &lt;a href=&#34;https://en.wikipedia.org/wiki/Browser_engine&#34;&gt;browser engine&lt;/a&gt; &lt;a href=&#34;https://en.wikipedia.org/wiki/WebKit&#34;&gt;Webkit&lt;/a&gt;).&lt;/p&gt;
+
+&lt;div style=&#34;position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;&#34;&gt;
+  &lt;iframe src=&#34;https://www.youtube.com/embed/Ix_EGr-9nWQ&#34; style=&#34;position: absolute; top: 0; left: 0; width: 100%; height: 100%; border:0;&#34; allowfullscreen title=&#34;YouTube Video&#34;&gt;&lt;/iframe&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Also, the source code is open source and available &lt;a href=&#34;https://github.com/bernsteining/chiphuit&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
+&lt;h1 id=&#34;whats-next&#34;&gt;what&amp;rsquo;s next&lt;/h1&gt;
+&lt;p&gt;First, &lt;a href=&#34;https://chip-8.github.io/extensions/&#34;&gt;chip8 instruction set can be extended&lt;/a&gt;, so we could modify the emulator to run even more ROMs if we wanted to.&lt;/p&gt;
+&lt;p&gt;Also, there are 2 possible improvements to the emulator:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;targeting another architecture than WebAssembly using &lt;a href=&#34;https://doc.rust-lang.org/reference/conditional-compilation.html&#34;&gt;conditional compilation&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;using a GUI library to build a fully fledged debugger&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;If I use &lt;a href=&#34;https://doc.rust-lang.org/reference/conditional-compilation.html&#34;&gt;conditional compilation&lt;/a&gt; to target another architecture, I would have to remake the front since my current GUI targets a browser. So in both case I&amp;rsquo;m going to have remake the GUI.&lt;/p&gt;
+&lt;p&gt;Thus, I&amp;rsquo;m currently looking for a GUI library that would tackle both problems among these libraries:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/emilk/egui&#34;&gt;egui&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/linebender/druid&#34;&gt;druid&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/iced-rs/iced&#34;&gt;iced&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/slint-ui/slint&#34;&gt;Slint (previously SixtyFPS)&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/imgui-rs/imgui-rs&#34;&gt;imgui-rs&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;I&amp;rsquo;m quite a fan of &lt;a href=&#34;https://github.com/emilk/egui&#34;&gt;egui&lt;/a&gt; at the moment but haven&amp;rsquo;t tested others yet.&lt;/p&gt;
+&lt;p&gt;Anyway, maybe I&amp;rsquo;ll start another emulator with that in mind soon and keep that one at this state, according to the &lt;a href=&#34;https://www.reddit.com/r/EmuDev/&#34;&gt;emudev&lt;/a&gt; community GameBoy is the next emulator to build after chip8.&lt;/p&gt;
+&lt;h1 id=&#34;documentation--links&#34;&gt;Documentation &amp;amp; links&lt;/h1&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://en.wikipedia.org/wiki/CHIP-8#Opcode_table&#34;&gt;chip8 wikipedia&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://rustwasm.github.io/wasm-bindgen/examples/&#34;&gt;wasm-bindgen repo examples&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;http://devernay.free.fr/hacks/chip8/chip8def.htm&#34;&gt;cowgod&amp;rsquo;s chip8 technical reference&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://www.reddit.com/r/EmuDev/&#34;&gt;emudev community reddit&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://discord.gg/dkmJAes&#34;&gt;emudev community discord&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://chip-8.github.io/links/&#34;&gt;chip8 links&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+</content>
+    </item>
+    
+  </channel>
+</rss>
