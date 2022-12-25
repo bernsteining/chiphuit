@@ -1,6 +1,6 @@
 # chiphuit
 
-Yet another chip8 emulator, written in Rust compiled to WASM.
+Yet another chip8 emulator, written in Rust compiled to WASM. Feel free to read the [blogpost](https://bernsteining.github.io/chiphuit/posts/writing_a_chip8_emulator_in_rust/) about how it works.
 
 # play
 
