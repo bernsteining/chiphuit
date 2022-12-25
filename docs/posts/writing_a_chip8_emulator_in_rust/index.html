@@ -7,27 +7,27 @@
   <meta http-equiv="content-type" content="text/html; charset=utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="intro I&amp;rsquo;ve always been curious about emulation, hypervisors etc so I started to read about it and came accross an awesome blog post explaining the basics of emulation with chip8 as an example.
-It demystified a lot and didn&amp;rsquo;t spoiled too much so it motivated me a lot to write my own emulator from scratch using rust and targeting WebAssembly.
+It demystified a lot and didn&amp;rsquo;t spoiled too much so it motivated me a lot to write my own emulator from scratch using rust and targeting WebAssembly: chiphuit.
 First of all I didn&amp;rsquo;t want to use third party crates that would have spoiled the journey, such as gloo." />
 <meta name="keywords" content="rust, chip8, emulation, emulator, wasm, webassembly" />
 <meta name="robots" content="noodp" />
-<link rel="canonical" href="/posts/writing_a_chip8_emulator_in_rust/" />
+<link rel="canonical" href="https://bernsteining.github.io/chiphuit/posts/writing_a_chip8_emulator_in_rust/" />
 
 
 
 
-<link rel="stylesheet" href="/assets/style.css">
+<link rel="stylesheet" href="https://bernsteining.github.io/chiphuit/assets/style.css">
 
-  <link rel="stylesheet" href="/assets/pink.css">
-
-
+  <link rel="stylesheet" href="https://bernsteining.github.io/chiphuit/assets/pink.css">
 
 
 
 
-<link rel="apple-touch-icon" href="/img/apple-touch-icon-192x192.png">
 
-  <link rel="shortcut icon" href="/img/favicon/pink.png">
+
+<link rel="apple-touch-icon" href="https://bernsteining.github.io/chiphuit/img/apple-touch-icon-192x192.png">
+
+  <link rel="shortcut icon" href="https://bernsteining.github.io/chiphuit/img/favicon/pink.png">
 
 
 
@@ -44,12 +44,12 @@ First of all I didn&amp;rsquo;t want to use third party crates that would have s
 <meta property="og:type" content="article" />
 <meta property="og:title" content="web-sys journey: writing a chip8 emulator in rust">
 <meta property="og:description" content="intro I&amp;rsquo;ve always been curious about emulation, hypervisors etc so I started to read about it and came accross an awesome blog post explaining the basics of emulation with chip8 as an example.
-It demystified a lot and didn&amp;rsquo;t spoiled too much so it motivated me a lot to write my own emulator from scratch using rust and targeting WebAssembly.
+It demystified a lot and didn&amp;rsquo;t spoiled too much so it motivated me a lot to write my own emulator from scratch using rust and targeting WebAssembly: chiphuit.
 First of all I didn&amp;rsquo;t want to use third party crates that would have spoiled the journey, such as gloo." />
-<meta property="og:url" content="/posts/writing_a_chip8_emulator_in_rust/" />
+<meta property="og:url" content="https://bernsteining.github.io/chiphuit/posts/writing_a_chip8_emulator_in_rust/" />
 <meta property="og:site_name" content="Bernie&#39;s lair" />
 
-  <meta property="og:image" content="/">
+  <meta property="og:image" content="https://bernsteining.github.io/chiphuit">
 
 <meta property="og:image:width" content="2048">
 <meta property="og:image:height" content="1024">
@@ -72,12 +72,12 @@ First of all I didn&amp;rsquo;t want to use third party crates that would have s
 <body class="pink">
 
 
-<div class="container headings--one-size">
+<div class="container center headings--one-size">
 
   <header class="header">
   <div class="header__inner">
     <div class="header__logo">
-      <a href="/">
+      <a href="https://bernsteining.github.io/chiphuit/">
   <div class="logo">
     Terminal
   </div>
@@ -94,11 +94,7 @@ First of all I didn&amp;rsquo;t want to use third party crates that would have s
     
       
         
-          <li><a href="/about">About</a></li>
-        
-      
-        
-          <li><a href="">Showcase</a></li>
+          <li><a href="https://bernsteining.github.io/chiphuit/about">about</a></li>
         
       
       
@@ -110,11 +106,7 @@ First of all I didn&amp;rsquo;t want to use third party crates that would have s
   <ul class="menu__inner menu__inner--mobile">
     
       
-        <li><a href="/about">About</a></li>
-      
-    
-      
-        <li><a href="">Showcase</a></li>
+        <li><a href="https://bernsteining.github.io/chiphuit/about">about</a></li>
       
     
     
@@ -129,7 +121,7 @@ First of all I didn&amp;rsquo;t want to use third party crates that would have s
     
 <div class="post">
   <h1 class="post-title">
-    <a href="/posts/writing_a_chip8_emulator_in_rust/">web-sys journey: writing a chip8 emulator in rust</a></h1>
+    <a href="https://bernsteining.github.io/chiphuit/posts/writing_a_chip8_emulator_in_rust/">web-sys journey: writing a chip8 emulator in rust</a></h1>
   <div class="post-meta">
     
       <span class="post-date">
@@ -142,15 +134,15 @@ First of all I didn&amp;rsquo;t want to use third party crates that would have s
   
   <span class="post-tags">
     
-    #<a href="/tags/development/">development</a>&nbsp;
+    #<a href="https://bernsteining.github.io/chiphuit/tags/development/">development</a>&nbsp;
     
-    #<a href="/tags/emulation/">emulation</a>&nbsp;
+    #<a href="https://bernsteining.github.io/chiphuit/tags/emulation/">emulation</a>&nbsp;
     
-    #<a href="/tags/emudev/">emudev</a>&nbsp;
+    #<a href="https://bernsteining.github.io/chiphuit/tags/emudev/">emudev</a>&nbsp;
     
-    #<a href="/tags/chip8/">chip8</a>&nbsp;
+    #<a href="https://bernsteining.github.io/chiphuit/tags/chip8/">chip8</a>&nbsp;
     
-    #<a href="/tags/rust/">rust</a>&nbsp;
+    #<a href="https://bernsteining.github.io/chiphuit/tags/rust/">rust</a>&nbsp;
     
   </span>
   
@@ -161,12 +153,12 @@ First of all I didn&amp;rsquo;t want to use third party crates that would have s
 
   <div class="post-content"><div>
         
-  <img src="/images/chip8/emulator_debugger.png"  class="left"  />
+  <img src="https://bernsteining.github.io/chiphuit/images/chip8/emulator_debugger.png"  class="left"  />
 
 
 <h1 id="intro">intro<a href="#intro" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
 <p>I&rsquo;ve always been curious about emulation, hypervisors etc so I started to read about it and came accross an <a href="https://multigesture.net/articles/how-to-write-an-emulator-chip-8-interpreter/">awesome blog post</a> explaining the basics of emulation with chip8 as an example.</p>
-<p>It demystified a lot and didn&rsquo;t spoiled too much so it motivated me a lot to write my own emulator from scratch using rust and targeting WebAssembly.</p>
+<p>It demystified a lot and didn&rsquo;t spoiled too much so it motivated me a lot to write my own emulator from scratch using rust and targeting WebAssembly: <a href="https://github.com/bernsteining/chiphuit/">chiphuit</a>.</p>
 <p>First of all I didn&rsquo;t want to use third party crates that would have spoiled the journey, such as <a href="https://github.com/rustwasm/gloo">gloo</a>. I wanted to learn to use <a href="https://docs.rs/web-sys/latest/web_sys/index.html">web-sys</a> in order to control as much as possible the interaction between my code and the browser. This allowed me to learn a lot about the browsers APIs since <a href="https://docs.rs/web-sys/latest/web_sys/index.html">web-sys</a> types are directly mapped with the <a href="https://developer.mozilla.org/en-US/docs/Web/API">standard Web API</a>. According to its documentation, <a href="https://docs.rs/web-sys/latest/web_sys/index.html">web-sys</a> &ldquo;is sort of like the libc crate, but for the Web&rdquo;.</p>
 <p>Also, many Rust/WebAssembly projects tend to handle a lot of logic on the browser side with JavaScript code, I didn&rsquo;t want to do that and focused on doing as much as possible in rust.</p>
 <h1 id="chip8-vm">chip8 vm<a href="#chip8-vm" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
@@ -226,7 +218,7 @@ First of all I didn&amp;rsquo;t want to use third party crates that would have s
 </ul>
 <p>Rust is a safe language and has concepts other languages do not have. The <a href="https://doc.rust-lang.org/book/ch04-02-references-and-borrowing.html">borrow checker</a> is one of them and <a href="https://doc.rust-lang.org/book/ch15-05-interior-mutability.html">Rc&lt;RefCell&lt;T&gt;&gt;</a> is just a way to check borrowing rules correctness at runtime instead of compile time. But that&rsquo;s absolutely not the point of this blogpost.</p>
 <h1 id="how-it-works">how it works<a href="#how-it-works" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h1>
-<p>When the <code>Emulator</code> is initialized, all its fields are set to its <a href="https://github.com/bernsteining/chiphuit/blob/master/src/cpu.rs#L126">default values</a> (basically everything is set to 0 / false).</p>
+<p>When the <code>Emulator</code> is initialized, all its fields are set to its <a href="https://github.com/bernsteining/chiphuit/blob/master/src/cpu.rs#L150">default values</a> (basically everything is set to 0 / false).</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-rust" data-lang="rust"><span style="display:flex;"><span><span style="color:#66d9ef">impl</span> Emulator {
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">pub</span> <span style="color:#66d9ef">fn</span> <span style="color:#a6e22e">new</span>() -&gt; <span style="color:#a6e22e">Emulator</span> {
 </span></span><span style="display:flex;"><span>        Emulator {
@@ -295,7 +287,7 @@ First of all I didn&amp;rsquo;t want to use third party crates that would have s
 </span></span><span style="display:flex;"><span>        self.rom_buffer.borrow_mut().clear();
 </span></span><span style="display:flex;"><span>    }
 </span></span></code></pre></div><p>Now we&rsquo;re ready to enter the event loop.</p>
-<p>The <a href="https://github.com/bernsteining/chiphuit/blob/master/src/lib.rs#L67">event loop</a> is basically an infinite loop that handles 3 things on each iteration:</p>
+<p>The <a href="https://github.com/bernsteining/chiphuit/blob/master/src/lib.rs#L71">event loop</a> is basically an infinite loop that handles 3 things on each iteration:</p>
 <ul>
 <li>the instruction cycle</li>
 <li>the screen display &amp; audio</li>
@@ -480,7 +472,7 @@ First of all I didn&amp;rsquo;t want to use third party crates that would have s
 </span></span><span style="display:flex;"><span>    self.registers[<span style="color:#ae81ff">15</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span><span style="color:#66d9ef">u8</span> <span style="color:#f92672">&amp;</span> self.get_vx();
 </span></span><span style="display:flex;"><span>    self.registers[self.current_opcode.second_nibble <span style="color:#66d9ef">as</span> <span style="color:#66d9ef">usize</span>] <span style="color:#f92672">&gt;&gt;=</span> <span style="color:#ae81ff">1</span>;
 </span></span><span style="display:flex;"><span>}
-</span></span></code></pre></div><p>You&rsquo;ll notice the presence of <a href="https://github.com/bernsteining/chiphuit/blob/master/src/cpu.rs#L242">get_vy()</a>, <a href="https://github.com/bernsteining/chiphuit/blob/master/src/cpu.rs#L236">get_vx()</a> and the <a href="https://github.com/bernsteining/chiphuit/blob/master/src/cpu.rs#L235">carry</a> functions.</p>
+</span></span></code></pre></div><p>You&rsquo;ll notice the presence of <a href="https://github.com/bernsteining/chiphuit/blob/master/src/cpu.rs#L286">get_vy()</a>, <a href="https://github.com/bernsteining/chiphuit/blob/master/src/cpu.rs#L280">get_vx()</a> and the <a href="https://github.com/bernsteining/chiphuit/blob/master/src/cpu.rs#L271">carry</a> functions.</p>
 <p>All the opcodes share common patterns so it&rsquo;s a good idea to factorize common patterns in separate functions in order to reuse code, the code usually looks cleaner this way.</p>
 <p>NB: A very handy way to ensure all opcodes&rsquo; implementation correctness is by loading <a href="https://github.com/corax89/chip8-test-rom">this ROM</a> in your emulator. You&rsquo;ll be able to see which opcode handle function is incorrect. Helped me a lot when I didn&rsquo;t have my debugger yet.</p>
 <h2 id="handling-the-screen-display">handling the screen display<a href="#handling-the-screen-display" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
@@ -517,7 +509,7 @@ First of all I didn&amp;rsquo;t want to use third party crates that would have s
 </li>
 </ul>
 <p>Then all we will have to do is call <code>draw_screen</code> in our event loop to refresh the emulator&rsquo;s screen in our Browser&rsquo;s Canvas.</p>
-<p>There&rsquo;s only 1 opcode that handles the drawing of the sprites on a chip8 emulator screen, it&rsquo;s the <code>DXYN</code>. It does so by <a href="https://en.wikipedia.org/wiki/Exclusive_or">XOR</a>ing rectangle areas with the previous frame, you can see its implementation <a href="https://github.com/bernsteining/chiphuit/blob/master/src/cpu.rs#L436">here</a>.</p>
+<p>There&rsquo;s only 1 opcode that handles the drawing of the sprites on a chip8 emulator screen, it&rsquo;s the <code>DXYN</code>. It does so by <a href="https://en.wikipedia.org/wiki/Exclusive_or">XOR</a>ing rectangle areas with the previous frame, you can see its implementation <a href="https://github.com/bernsteining/chiphuit/blob/master/src/cpu.rs#L473">here</a>.</p>
 <h2 id="handling-audio">handling audio<a href="#handling-audio" class="hanchor" ariaLabel="Anchor">&#8983;</a> </h2>
 <p>The <code>Emulator</code> struct has a <a href="https://doc.rust-lang.org/std/primitive.u8.html">u8</a> <code>sound_timer</code>. We should hear a &lsquo;beep&rsquo; noise if <code>sound_timer</code> has a positive value and decrement it, so the code is pretty straightforward:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-rust" data-lang="rust"><span style="display:flex;"><span><span style="color:#66d9ef">pub</span> <span style="color:#66d9ef">fn</span> <span style="color:#a6e22e">sound</span>(emulator: <span style="color:#66d9ef">&amp;</span><span style="color:#a6e22e">mut</span> cpu::Emulator, audio_context: <span style="color:#66d9ef">&amp;</span><span style="color:#a6e22e">FmOsc</span>) {
@@ -576,10 +568,10 @@ First of all I didn&amp;rsquo;t want to use third party crates that would have s
 </span></span></code></pre></div><p>To define a callback upon a specific event, we have to use <a href="https://rustwasm.github.io/wasm-bindgen/examples/closures.html">event handlers</a>. This can be done using rust closures, and once again <a href="https://rustwasm.github.io/wasm-bindgen/examples/closures.html">wasm-bindgen</a> provides a nice example of how to do so.</p>
 <p>Therefore, to fulfill our needs, we define two functions:</p>
 <ul>
-<li><a href="https://github.com/bernsteining/chiphuit/blob/master/src/utils.rs#L118"><code>set_callback_to_key</code></a></li>
-<li><a href="https://github.com/bernsteining/chiphuit/blob/master/src/utils.rs#L77"><code>set_callback_to_button</code></a>.</li>
+<li><a href="https://github.com/bernsteining/chiphuit/blob/master/src/utils.rs#L129"><code>set_callback_to_key</code></a></li>
+<li><a href="https://github.com/bernsteining/chiphuit/blob/master/src/utils.rs#L88"><code>set_callback_to_button</code></a>.</li>
 </ul>
-<p><a href="https://github.com/bernsteining/chiphuit/blob/master/src/utils.rs#L118"><code>set_callback_to_key</code></a> adds an event listener to handle keyboard event with the <a href="https://developer.mozilla.org/en-US/docs/Web/API/Document/keyup_event">keyup</a> and <a href="https://developer.mozilla.org/en-US/docs/Web/API/Document/keydown_event">keydown</a> events. These allow the user to play on the emulator using his physical keyboard.</p>
+<p><a href="https://github.com/bernsteining/chiphuit/blob/master/src/utils.rs#L129"><code>set_callback_to_key</code></a> adds an event listener to handle keyboard event with the <a href="https://developer.mozilla.org/en-US/docs/Web/API/Document/keyup_event">keyup</a> and <a href="https://developer.mozilla.org/en-US/docs/Web/API/Document/keydown_event">keydown</a> events. These allow the user to play on the emulator using his physical keyboard.</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-rust" data-lang="rust"><span style="display:flex;"><span><span style="color:#66d9ef">pub</span> <span style="color:#66d9ef">fn</span> <span style="color:#a6e22e">set_callback_to_key</span>(
 </span></span><span style="display:flex;"><span>    press: <span style="color:#66d9ef">bool</span>,
 </span></span><span style="display:flex;"><span>    key: String,
@@ -605,7 +597,7 @@ First of all I didn&amp;rsquo;t want to use third party crates that would have s
 </span></span><span style="display:flex;"><span>        .unwrap();
 </span></span><span style="display:flex;"><span>    callback.forget();
 </span></span><span style="display:flex;"><span>}
-</span></span></code></pre></div><p><a href="https://github.com/bernsteining/chiphuit/blob/master/src/utils.rs#L77"><code>set_callback_to_button</code></a> adds 2 event listeners so the user can play with the virtual keypad in the GUI:</p>
+</span></span></code></pre></div><p><a href="https://github.com/bernsteining/chiphuit/blob/master/src/utils.rs#L88"><code>set_callback_to_button</code></a> adds 2 event listeners so the user can play with the virtual keypad in the GUI:</p>
 <ul>
 <li><a href="https://developer.mozilla.org/en-US/docs/Web/API/Element/mouseup_event">mouseup</a> &amp; <a href="https://developer.mozilla.org/en-US/docs/Web/API/Element/mousedown_event">mousedown</a> to allow the user to play by clicking the virtual keypad with a mouse.</li>
 <li><a href="https://developer.mozilla.org/en-US/docs/Web/API/Element/touchstart_event">touchstart</a> &amp; <a href="https://developer.mozilla.org/en-US/docs/Web/API/Element/touchend_event">touchend</a> to allow the user to play on a touchscreen.</li>
@@ -782,8 +774,8 @@ First of all I didn&amp;rsquo;t want to use third party crates that would have s
   </div>
 </footer>
 
-<script src="/assets/main.js"></script>
-<script src="/assets/prism.js"></script>
+<script src="https://bernsteining.github.io/chiphuit/assets/main.js"></script>
+<script src="https://bernsteining.github.io/chiphuit/assets/prism.js"></script>
 
 
 

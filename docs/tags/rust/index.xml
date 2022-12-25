@@ -2,27 +2,27 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>rust on Bernie&#39;s lair</title>
-    <link>/tags/rust/</link>
+    <link>https://bernsteining.github.io/chiphuit/tags/rust/</link>
     <description>Recent content in rust on Bernie&#39;s lair</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Fri, 06 Aug 2021 16:15:42 +0200</lastBuildDate><atom:link href="/tags/rust/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Fri, 06 Aug 2021 16:15:42 +0200</lastBuildDate><atom:link href="https://bernsteining.github.io/chiphuit/tags/rust/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>web-sys journey: writing a chip8 emulator in rust</title>
-      <link>/posts/writing_a_chip8_emulator_in_rust/</link>
+      <link>https://bernsteining.github.io/chiphuit/posts/writing_a_chip8_emulator_in_rust/</link>
       <pubDate>Fri, 06 Aug 2021 16:15:42 +0200</pubDate>
       
-      <guid>/posts/writing_a_chip8_emulator_in_rust/</guid>
+      <guid>https://bernsteining.github.io/chiphuit/posts/writing_a_chip8_emulator_in_rust/</guid>
       <description>intro I&amp;rsquo;ve always been curious about emulation, hypervisors etc so I started to read about it and came accross an awesome blog post explaining the basics of emulation with chip8 as an example.
-It demystified a lot and didn&amp;rsquo;t spoiled too much so it motivated me a lot to write my own emulator from scratch using rust and targeting WebAssembly.
+It demystified a lot and didn&amp;rsquo;t spoiled too much so it motivated me a lot to write my own emulator from scratch using rust and targeting WebAssembly: chiphuit.
 First of all I didn&amp;rsquo;t want to use third party crates that would have spoiled the journey, such as gloo.</description>
       <content>
-  &lt;img src=&#34;/images/chip8/emulator_debugger.png&#34;  class=&#34;left&#34;  /&gt;
+  &lt;img src=&#34;https://bernsteining.github.io/chiphuit/images/chip8/emulator_debugger.png&#34;  class=&#34;left&#34;  /&gt;
 
 
 &lt;h1 id=&#34;intro&#34;&gt;intro&lt;/h1&gt;
 &lt;p&gt;I&amp;rsquo;ve always been curious about emulation, hypervisors etc so I started to read about it and came accross an &lt;a href=&#34;https://multigesture.net/articles/how-to-write-an-emulator-chip-8-interpreter/&#34;&gt;awesome blog post&lt;/a&gt; explaining the basics of emulation with chip8 as an example.&lt;/p&gt;
-&lt;p&gt;It demystified a lot and didn&amp;rsquo;t spoiled too much so it motivated me a lot to write my own emulator from scratch using rust and targeting WebAssembly.&lt;/p&gt;
+&lt;p&gt;It demystified a lot and didn&amp;rsquo;t spoiled too much so it motivated me a lot to write my own emulator from scratch using rust and targeting WebAssembly: &lt;a href=&#34;https://github.com/bernsteining/chiphuit/&#34;&gt;chiphuit&lt;/a&gt;.&lt;/p&gt;
 &lt;p&gt;First of all I didn&amp;rsquo;t want to use third party crates that would have spoiled the journey, such as &lt;a href=&#34;https://github.com/rustwasm/gloo&#34;&gt;gloo&lt;/a&gt;. I wanted to learn to use &lt;a href=&#34;https://docs.rs/web-sys/latest/web_sys/index.html&#34;&gt;web-sys&lt;/a&gt; in order to control as much as possible the interaction between my code and the browser. This allowed me to learn a lot about the browsers APIs since &lt;a href=&#34;https://docs.rs/web-sys/latest/web_sys/index.html&#34;&gt;web-sys&lt;/a&gt; types are directly mapped with the &lt;a href=&#34;https://developer.mozilla.org/en-US/docs/Web/API&#34;&gt;standard Web API&lt;/a&gt;. According to its documentation, &lt;a href=&#34;https://docs.rs/web-sys/latest/web_sys/index.html&#34;&gt;web-sys&lt;/a&gt; &amp;ldquo;is sort of like the libc crate, but for the Web&amp;rdquo;.&lt;/p&gt;
 &lt;p&gt;Also, many Rust/WebAssembly projects tend to handle a lot of logic on the browser side with JavaScript code, I didn&amp;rsquo;t want to do that and focused on doing as much as possible in rust.&lt;/p&gt;
 &lt;h1 id=&#34;chip8-vm&#34;&gt;chip8 vm&lt;/h1&gt;
@@ -82,7 +82,7 @@ First of all I didn&amp;rsquo;t want to use third party crates that would have s
 &lt;/ul&gt;
 &lt;p&gt;Rust is a safe language and has concepts other languages do not have. The &lt;a href=&#34;https://doc.rust-lang.org/book/ch04-02-references-and-borrowing.html&#34;&gt;borrow checker&lt;/a&gt; is one of them and &lt;a href=&#34;https://doc.rust-lang.org/book/ch15-05-interior-mutability.html&#34;&gt;Rc&amp;lt;RefCell&amp;lt;T&amp;gt;&amp;gt;&lt;/a&gt; is just a way to check borrowing rules correctness at runtime instead of compile time. But that&amp;rsquo;s absolutely not the point of this blogpost.&lt;/p&gt;
 &lt;h1 id=&#34;how-it-works&#34;&gt;how it works&lt;/h1&gt;
-&lt;p&gt;When the &lt;code&gt;Emulator&lt;/code&gt; is initialized, all its fields are set to its &lt;a href=&#34;https://github.com/bernsteining/chiphuit/blob/master/src/cpu.rs#L126&#34;&gt;default values&lt;/a&gt; (basically everything is set to 0 / false).&lt;/p&gt;
+&lt;p&gt;When the &lt;code&gt;Emulator&lt;/code&gt; is initialized, all its fields are set to its &lt;a href=&#34;https://github.com/bernsteining/chiphuit/blob/master/src/cpu.rs#L150&#34;&gt;default values&lt;/a&gt; (basically everything is set to 0 / false).&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;impl&lt;/span&gt; Emulator {
 &lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;new&lt;/span&gt;() -&amp;gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Emulator&lt;/span&gt; {
 &lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        Emulator {
@@ -151,7 +151,7 @@ First of all I didn&amp;rsquo;t want to use third party crates that would have s
 &lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        self.rom_buffer.borrow_mut().clear();
 &lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    }
 &lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Now we&amp;rsquo;re ready to enter the event loop.&lt;/p&gt;
-&lt;p&gt;The &lt;a href=&#34;https://github.com/bernsteining/chiphuit/blob/master/src/lib.rs#L67&#34;&gt;event loop&lt;/a&gt; is basically an infinite loop that handles 3 things on each iteration:&lt;/p&gt;
+&lt;p&gt;The &lt;a href=&#34;https://github.com/bernsteining/chiphuit/blob/master/src/lib.rs#L71&#34;&gt;event loop&lt;/a&gt; is basically an infinite loop that handles 3 things on each iteration:&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;the instruction cycle&lt;/li&gt;
 &lt;li&gt;the screen display &amp;amp; audio&lt;/li&gt;
@@ -336,7 +336,7 @@ First of all I didn&amp;rsquo;t want to use third party crates that would have s
 &lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    self.registers[&lt;span style=&#34;color:#ae81ff&#34;&gt;15&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;u8&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt; self.get_vx();
 &lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    self.registers[self.current_opcode.second_nibble &lt;span style=&#34;color:#66d9ef&#34;&gt;as&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;usize&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&amp;gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;;
 &lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;}
-&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;You&amp;rsquo;ll notice the presence of &lt;a href=&#34;https://github.com/bernsteining/chiphuit/blob/master/src/cpu.rs#L242&#34;&gt;get_vy()&lt;/a&gt;, &lt;a href=&#34;https://github.com/bernsteining/chiphuit/blob/master/src/cpu.rs#L236&#34;&gt;get_vx()&lt;/a&gt; and the &lt;a href=&#34;https://github.com/bernsteining/chiphuit/blob/master/src/cpu.rs#L235&#34;&gt;carry&lt;/a&gt; functions.&lt;/p&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;You&amp;rsquo;ll notice the presence of &lt;a href=&#34;https://github.com/bernsteining/chiphuit/blob/master/src/cpu.rs#L286&#34;&gt;get_vy()&lt;/a&gt;, &lt;a href=&#34;https://github.com/bernsteining/chiphuit/blob/master/src/cpu.rs#L280&#34;&gt;get_vx()&lt;/a&gt; and the &lt;a href=&#34;https://github.com/bernsteining/chiphuit/blob/master/src/cpu.rs#L271&#34;&gt;carry&lt;/a&gt; functions.&lt;/p&gt;
 &lt;p&gt;All the opcodes share common patterns so it&amp;rsquo;s a good idea to factorize common patterns in separate functions in order to reuse code, the code usually looks cleaner this way.&lt;/p&gt;
 &lt;p&gt;NB: A very handy way to ensure all opcodes&amp;rsquo; implementation correctness is by loading &lt;a href=&#34;https://github.com/corax89/chip8-test-rom&#34;&gt;this ROM&lt;/a&gt; in your emulator. You&amp;rsquo;ll be able to see which opcode handle function is incorrect. Helped me a lot when I didn&amp;rsquo;t have my debugger yet.&lt;/p&gt;
 &lt;h2 id=&#34;handling-the-screen-display&#34;&gt;handling the screen display&lt;/h2&gt;
@@ -373,7 +373,7 @@ First of all I didn&amp;rsquo;t want to use third party crates that would have s
 &lt;/li&gt;
 &lt;/ul&gt;
 &lt;p&gt;Then all we will have to do is call &lt;code&gt;draw_screen&lt;/code&gt; in our event loop to refresh the emulator&amp;rsquo;s screen in our Browser&amp;rsquo;s Canvas.&lt;/p&gt;
-&lt;p&gt;There&amp;rsquo;s only 1 opcode that handles the drawing of the sprites on a chip8 emulator screen, it&amp;rsquo;s the &lt;code&gt;DXYN&lt;/code&gt;. It does so by &lt;a href=&#34;https://en.wikipedia.org/wiki/Exclusive_or&#34;&gt;XOR&lt;/a&gt;ing rectangle areas with the previous frame, you can see its implementation &lt;a href=&#34;https://github.com/bernsteining/chiphuit/blob/master/src/cpu.rs#L436&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;There&amp;rsquo;s only 1 opcode that handles the drawing of the sprites on a chip8 emulator screen, it&amp;rsquo;s the &lt;code&gt;DXYN&lt;/code&gt;. It does so by &lt;a href=&#34;https://en.wikipedia.org/wiki/Exclusive_or&#34;&gt;XOR&lt;/a&gt;ing rectangle areas with the previous frame, you can see its implementation &lt;a href=&#34;https://github.com/bernsteining/chiphuit/blob/master/src/cpu.rs#L473&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
 &lt;h2 id=&#34;handling-audio&#34;&gt;handling audio&lt;/h2&gt;
 &lt;p&gt;The &lt;code&gt;Emulator&lt;/code&gt; struct has a &lt;a href=&#34;https://doc.rust-lang.org/std/primitive.u8.html&#34;&gt;u8&lt;/a&gt; &lt;code&gt;sound_timer&lt;/code&gt;. We should hear a &amp;lsquo;beep&amp;rsquo; noise if &lt;code&gt;sound_timer&lt;/code&gt; has a positive value and decrement it, so the code is pretty straightforward:&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sound&lt;/span&gt;(emulator: &lt;span style=&#34;color:#66d9ef&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;mut&lt;/span&gt; cpu::Emulator, audio_context: &lt;span style=&#34;color:#66d9ef&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;FmOsc&lt;/span&gt;) {
@@ -432,10 +432,10 @@ First of all I didn&amp;rsquo;t want to use third party crates that would have s
 &lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;To define a callback upon a specific event, we have to use &lt;a href=&#34;https://rustwasm.github.io/wasm-bindgen/examples/closures.html&#34;&gt;event handlers&lt;/a&gt;. This can be done using rust closures, and once again &lt;a href=&#34;https://rustwasm.github.io/wasm-bindgen/examples/closures.html&#34;&gt;wasm-bindgen&lt;/a&gt; provides a nice example of how to do so.&lt;/p&gt;
 &lt;p&gt;Therefore, to fulfill our needs, we define two functions:&lt;/p&gt;
 &lt;ul&gt;
-&lt;li&gt;&lt;a href=&#34;https://github.com/bernsteining/chiphuit/blob/master/src/utils.rs#L118&#34;&gt;&lt;code&gt;set_callback_to_key&lt;/code&gt;&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&#34;https://github.com/bernsteining/chiphuit/blob/master/src/utils.rs#L77&#34;&gt;&lt;code&gt;set_callback_to_button&lt;/code&gt;&lt;/a&gt;.&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/bernsteining/chiphuit/blob/master/src/utils.rs#L129&#34;&gt;&lt;code&gt;set_callback_to_key&lt;/code&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/bernsteining/chiphuit/blob/master/src/utils.rs#L88&#34;&gt;&lt;code&gt;set_callback_to_button&lt;/code&gt;&lt;/a&gt;.&lt;/li&gt;
 &lt;/ul&gt;
-&lt;p&gt;&lt;a href=&#34;https://github.com/bernsteining/chiphuit/blob/master/src/utils.rs#L118&#34;&gt;&lt;code&gt;set_callback_to_key&lt;/code&gt;&lt;/a&gt; adds an event listener to handle keyboard event with the &lt;a href=&#34;https://developer.mozilla.org/en-US/docs/Web/API/Document/keyup_event&#34;&gt;keyup&lt;/a&gt; and &lt;a href=&#34;https://developer.mozilla.org/en-US/docs/Web/API/Document/keydown_event&#34;&gt;keydown&lt;/a&gt; events. These allow the user to play on the emulator using his physical keyboard.&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://github.com/bernsteining/chiphuit/blob/master/src/utils.rs#L129&#34;&gt;&lt;code&gt;set_callback_to_key&lt;/code&gt;&lt;/a&gt; adds an event listener to handle keyboard event with the &lt;a href=&#34;https://developer.mozilla.org/en-US/docs/Web/API/Document/keyup_event&#34;&gt;keyup&lt;/a&gt; and &lt;a href=&#34;https://developer.mozilla.org/en-US/docs/Web/API/Document/keydown_event&#34;&gt;keydown&lt;/a&gt; events. These allow the user to play on the emulator using his physical keyboard.&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-rust&#34; data-lang=&#34;rust&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;pub&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;fn&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;set_callback_to_key&lt;/span&gt;(
 &lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    press: &lt;span style=&#34;color:#66d9ef&#34;&gt;bool&lt;/span&gt;,
 &lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    key: String,
@@ -461,7 +461,7 @@ First of all I didn&amp;rsquo;t want to use third party crates that would have s
 &lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        .unwrap();
 &lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    callback.forget();
 &lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;}
-&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;a href=&#34;https://github.com/bernsteining/chiphuit/blob/master/src/utils.rs#L77&#34;&gt;&lt;code&gt;set_callback_to_button&lt;/code&gt;&lt;/a&gt; adds 2 event listeners so the user can play with the virtual keypad in the GUI:&lt;/p&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;a href=&#34;https://github.com/bernsteining/chiphuit/blob/master/src/utils.rs#L88&#34;&gt;&lt;code&gt;set_callback_to_button&lt;/code&gt;&lt;/a&gt; adds 2 event listeners so the user can play with the virtual keypad in the GUI:&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;&lt;a href=&#34;https://developer.mozilla.org/en-US/docs/Web/API/Element/mouseup_event&#34;&gt;mouseup&lt;/a&gt; &amp;amp; &lt;a href=&#34;https://developer.mozilla.org/en-US/docs/Web/API/Element/mousedown_event&#34;&gt;mousedown&lt;/a&gt; to allow the user to play by clicking the virtual keypad with a mouse.&lt;/li&gt;
 &lt;li&gt;&lt;a href=&#34;https://developer.mozilla.org/en-US/docs/Web/API/Element/touchstart_event&#34;&gt;touchstart&lt;/a&gt; &amp;amp; &lt;a href=&#34;https://developer.mozilla.org/en-US/docs/Web/API/Element/touchend_event&#34;&gt;touchend&lt;/a&gt; to allow the user to play on a touchscreen.&lt;/li&gt;
